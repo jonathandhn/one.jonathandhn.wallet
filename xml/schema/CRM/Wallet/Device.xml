@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<schema>
+  <tables>
+    <table name="civicrm_wallet_device">
+      <comment>Registered Devices for Apple Wallet Push Notifications</comment>
+      <field>
+        <name>id</name>
+        <type>int unsigned</type>
+        <required>true</required>
+        <comment>Unique Device ID</comment>
+        <add>1.0</add>
+      </field>
+      <primaryKey>
+        <name>id</name>
+        <autoincrement>true</autoincrement>
+      </primaryKey>
+      <field>
+        <name>pass_id</name>
+        <type>int unsigned</type>
+        <required>true</required>
+        <comment>FK to Wallet Pass</comment>
+        <add>1.0</add>
+      </field>
+      <foreignKey>
+        <name>pass_id</name>
+        <table>civicrm_wallet_pass</table>
+        <key>id</key>
+        <onDelete>CASCADE</onDelete>
+        <add>1.0</add>
+      </foreignKey>
+      <field>
+        <name>device_library_identifier</name>
+        <type>varchar</type>
+        <length>255</length>
+        <required>true</required>
+        <comment>Device Library Identifier (from Apple)</comment>
+        <add>1.0</add>
+      </field>
+      <field>
+        <name>push_token</name>
+        <type>varchar</type>
+        <length>255</length>
+        <required>true</required>
+        <comment>Push Token (from Apple)</comment>
+        <add>1.0</add>
+      </field>
+      <index>
+        <name>index_device_pass</name>
+        <fieldName>device_library_identifier</fieldName>
+        <fieldName>pass_id</fieldName>
+        <unique>true</unique>
+        <add>1.0</add>
+      </index>
+    </table>
+  </tables>
+</schema>

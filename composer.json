@@ -1,0 +1,23 @@
+{
+    "name": "org.soshomophobie.wallet/civi-wallet",
+    "description": "CiviCRM extension for Apple and Google Wallet",
+    "license": "AGPL-3.0",
+    "authors": [
+        {
+            "name": "SOS homophobie",
+            "email": "sos@sos-homophobie.org"
+        }
+    ],
+    "require": {
+        "pkpass/pkpass": "^2.0",
+        "google/apiclient": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Civi\\Wallet\\": "Civi/Wallet"
+        },
+        "psr-0": {
+            "CRM_": "."
+        }
+    }
+}

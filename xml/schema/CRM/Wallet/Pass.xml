@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<schema>
+  <tables>
+    <table name="civicrm_wallet_pass">
+      <comment>Wallet Passes (Apple/Google)</comment>
+      <field>
+        <name>id</name>
+        <type>int unsigned</type>
+        <required>true</required>
+        <comment>Unique Pass ID</comment>
+        <add>1.0</add>
+      </field>
+      <primaryKey>
+        <name>id</name>
+        <autoincrement>true</autoincrement>
+      </primaryKey>
+      <field>
+        <name>participant_id</name>
+        <type>int unsigned</type>
+        <required>true</required>
+        <comment>FK to Participant ID</comment>
+        <add>1.0</add>
+      </field>
+      <foreignKey>
+        <name>participant_id</name>
+        <table>civicrm_participant</table>
+        <key>id</key>
+        <onDelete>CASCADE</onDelete>
+        <add>1.0</add>
+      </foreignKey>
+      <field>
+        <name>type</name>
+        <type>varchar</type>
+        <length>32</length>
+        <required>true</required>
+        <comment>Pass Type (apple/google)</comment>
+        <add>1.0</add>
+      </field>
+      <field>
+        <name>serial_number</name>
+        <type>varchar</type>
+        <length>255</length>
+        <required>true</required>
+        <comment>Serial Number</comment>
+        <add>1.0</add>
+      </field>
+      <field>
+        <name>authentication_token</name>
+        <type>varchar</type>
+        <length>255</length>
+        <required>true</required>
+        <comment>Authentication Token</comment>
+        <add>1.0</add>
+      </field>
+      <field>
+        <name>last_updated</name>
+        <type>timestamp</type>
+        <default>CURRENT_TIMESTAMP</default>
+        <comment>Last Updated Timestamp</comment>
+        <add>1.0</add>
+      </field>
+      <index>
+        <name>index_participant_type</name>
+        <fieldName>participant_id</fieldName>
+        <fieldName>type</fieldName>
+        <unique>true</unique>
+        <add>1.0</add>
+      </index>
+    </table>
+  </tables>
+</schema>
