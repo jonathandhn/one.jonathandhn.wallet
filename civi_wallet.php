@@ -71,7 +71,7 @@ function civi_wallet_civicrm_cron($job)
     // Create or Get Queue
     $queue = CRM_Queue_Service::singleton()->create([
         'type' => 'Sql',
-        'name' => 'org.soshomophobie.wallet.updates',
+        'name' => 'one.jonathandhn.wallet.updates',
         'runner' => 'task',
     ]);
 

@@ -109,7 +109,7 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting
         }
 
         // Handle Images
-        $extPath = CRM_Extension_System::singleton()->getMapper()->keyToBasePath('org.soshomophobie.wallet');
+        $extPath = CRM_Extension_System::singleton()->getMapper()->keyToBasePath('one.jonathandhn.wallet');
         $imagesDir = $extPath . '/resources/images/';
         if (!file_exists($imagesDir)) {
             mkdir($imagesDir, 0755, true);

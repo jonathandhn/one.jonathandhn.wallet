@@ -18,7 +18,7 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO
         $event = civicrm_api3('Event', 'getsingle', ['id' => $participant['event_id'], 'check_permissions' => FALSE]);
         $contact = civicrm_api3('Contact', 'getsingle', ['id' => $participant['contact_id'], 'check_permissions' => FALSE]);
 
-        // Configuration
+        // Initialize Wallet settings
         $certPath = Civi::settings()->get('wallet_apple_cert');
         $certPass = Civi::settings()->get('wallet_apple_cert_password');
         $passTypeIdentifier = Civi::settings()->get('wallet_apple_pass_type_id');
@@ -40,16 +40,15 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO
 
         $pass = new PKPass($certPath, $certPass);
 
-        $serialNumber = $participantId . '-' . time(); // Simple serial number
+        $serialNumber = $participantId . '-' . time();
 
-        // Check if we already have a pass for this participant
+        // Check for existing pass
         $dao = CRM_Core_DAO::executeQuery("SELECT * FROM civicrm_wallet_pass WHERE participant_id = %1 AND type = 'apple'", [1 => [$participantId, 'Integer']]);
         if ($dao->fetch()) {
             $serialNumber = $dao->serial_number;
             $authenticationToken = $dao->authentication_token;
         } else {
-            $authenticationToken = md5(uniqid(rand(), true)); // Generate 32-char token
-            // Save new pass record
+            $authenticationToken = md5(uniqid(rand(), true));
             CRM_Core_DAO::executeQuery("INSERT INTO civicrm_wallet_pass (participant_id, type, serial_number, authentication_token) VALUES (%1, 'apple', %2, %3)", [
                 1 => [$participantId, 'Integer'],
                 2 => [$serialNumber, 'String'],
@@ -66,7 +65,7 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO
             if (!empty($locBlock['address_id'])) {
                 $address = civicrm_api3('Address', 'getsingle', ['id' => $locBlock['address_id']]);
 
-                // Venue Name Priority
+                // Determine Venue Name
                 if (!empty($address['supplemental_address_1'])) {
                     $venueName = $address['supplemental_address_1'];
                 } elseif (!empty($address['name'])) {
@@ -75,7 +74,7 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO
                     $venueName = $address['street_address'];
                 }
 
-                // Venue Address Construction
+                // Construct Venue Address
                 $addressParts = [
                     $address['street_address'] ?? '',
                     $address['supplemental_address_2'] ?? '',
@@ -84,7 +83,7 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO
                 ];
                 $venueAddress = implode(', ', array_filter($addressParts));
 
-                // GPS
+                // Add GPS Coordinates
                 if (!empty($address['geo_code_1']) && !empty($address['geo_code_2'])) {
                     $locations[] = [
                         'latitude' => (float) $address['geo_code_1'],
@@ -95,10 +94,10 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO
             }
         }
 
-        // QR Code Content
+        // Generate QR Code Content
         $qrCodeContent = (string) $participant['id'];
 
-        // URLs
+        // Normalize URLs
         if ($websiteUrl && !preg_match("~^(?:f|ht)tps?://~i", $websiteUrl)) {
             $websiteUrl = "https://" . $websiteUrl;
         }
@@ -109,8 +108,7 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO
         // Prepare Back Fields
         $backFields = [];
 
-        // 1. Venue Info (Top of Page 2)
-        // Label = Venue Name, Value = Address
+        // Venue Info
         if ($venueName || $venueAddress) {
             $backFields[] = [
                 'key' => 'venue-info',
@@ -120,7 +118,7 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO
             ];
         }
 
-        // 2. Description (Only if not empty)
+        // Description
         if (!empty($event['description'])) {
             $backFields[] = [
                 'key' => 'description',
@@ -129,14 +127,14 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO
             ];
         }
 
-        // 3. Organizer (Moved from Page 1)
+        // Organizer
         $backFields[] = [
             'key' => 'organizer-name',
             'label' => 'Organisateur',
             'value' => $orgName,
         ];
 
-        // 4. Website (Informations)
+        // Website
         $backFields[] = [
             'key' => 'website',
             'label' => 'Informations',
@@ -144,7 +142,7 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO
             'attributedValue' => "<a href='$websiteUrl'>$websiteUrl</a>",
         ];
 
-        // 5. Contact
+        // Contact
         $backFields[] = [
             'key' => 'contact',
             'label' => 'Contact',
@@ -209,7 +207,7 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO
         ];
 
         // Add Images
-        $extPath = CRM_Extension_System::singleton()->getMapper()->keyToBasePath('org.soshomophobie.wallet');
+        $extPath = CRM_Extension_System::singleton()->getMapper()->keyToBasePath('one.jonathandhn.wallet');
         $imagesPath = $extPath . '/resources/images/';
         $iconPath = $imagesPath . 'icon.png';
         $logoPath = $imagesPath . 'logo.png';
@@ -362,7 +360,7 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO
         }
 
         // Image URLs (Must be public)
-        $extUrl = CRM_Extension_System::singleton()->getMapper()->keyToUrl('org.soshomophobie.wallet');
+        $extUrl = CRM_Extension_System::singleton()->getMapper()->keyToUrl('one.jonathandhn.wallet');
         $timestamp = time(); // Cache buster to force update
 
         $logoUrl = $extUrl . '/resources/images/icon.png?v=' . $timestamp;
@@ -401,7 +399,7 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO
 
                             if (file_exists($src)) {
                                 // Copy to public extension resource folder
-                                $extPath = CRM_Extension_System::singleton()->getMapper()->keyToBasePath('org.soshomophobie.wallet');
+                                $extPath = CRM_Extension_System::singleton()->getMapper()->keyToBasePath('one.jonathandhn.wallet');
                                 $publicImgDir = $extPath . '/resources/images/events/';
                                 if (!file_exists($publicImgDir)) {
                                     mkdir($publicImgDir, 0755, true);
@@ -482,10 +480,9 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO
 
         $classObj = new \Google\Service\Walletobjects\EventTicketClass($classMetadata);
 
-        // 1. Check/Create/Update Class
+        // Check if class exists, otherwise create it
         try {
             $service->eventticketclass->get($classId);
-            // Update existing class
             $service->eventticketclass->update($classId, $classObj);
         } catch (\Google\Service\Exception $e) {
             if ($e->getCode() == 404) {
@@ -499,7 +496,7 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO
         // Fetch Contact
         $contact = civicrm_api3('Contact', 'getsingle', ['id' => $participant['contact_id']]);
 
-        // 2. Check/Create/Update Object
+        // Check if object exists, otherwise create it
         $objectMetadata = [
             'id' => $objectId,
             'classId' => $classId,
@@ -553,7 +550,7 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO
             }
         }
 
-        // 3. Generate JWT Link
+        // Generate JWT Link
         // We need to create a JWT that claims this object.
         // Google PHP Client doesn't have a direct helper for the "Save to Android Pay" JWT link generation 
         // in the same way as the old libraries, but we can construct the claims and sign it.
@@ -628,7 +625,7 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO
         // Create or Get Queue
         $queue = CRM_Queue_Service::singleton()->create([
             'type' => 'Sql',
-            'name' => 'org.soshomophobie.wallet.updates',
+            'name' => 'one.jonathandhn.wallet.updates',
             'runner' => 'task',
         ]);
 

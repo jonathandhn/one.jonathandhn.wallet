@@ -131,7 +131,7 @@ class CRM_Wallet_Upgrader extends CRM_Extension_Upgrader_Base
             if (file_exists($source)) {
                 if (!copy($source, $dest)) {
                     CRM_Core_Error::debug_log_message("CiviWallet: Failed to copy API script to $dest");
-                    CRM_Core_Session::setStatus("Could not copy civi-wallet-api.php to webroot. Please copy it manually from extensions/org.soshomophobie.wallet/extern/api.php", "Installation Warning", "alert");
+                    CRM_Core_Session::setStatus("Could not copy civi-wallet-api.php to webroot. Please copy it manually from extensions/one.jonathandhn.wallet/extern/api.php", "Installation Warning", "alert");
                 } else {
                     CRM_Core_Session::setStatus("civi-wallet-api.php installed to webroot.", "Installation Success", "success");
                 }

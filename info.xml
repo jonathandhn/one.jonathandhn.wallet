@@ -1,17 +1,17 @@
 <?xml version="1.0"?>
-<extension key="org.soshomophobie.wallet" type="module">
+<extension key="one.jonathandhn.wallet" type="module">
   <file>civi_wallet</file>
   <name>CiviWallet</name>
   <description>Generate Apple Wallet and Google Wallet tickets for CiviCRM Events</description>
   <license>AGPL-3.0</license>
   <maintainer>
-    <author>SOS homophobie</author>
-    <email>sos@sos-homophobie.org</email>
+    <author>Jonathan Dahan</author>
+    <email>jonathan@dhn.one</email>
   </maintainer>
   <urls>
-    <url desc="Main Extension Page">https://github.com/soshomophobie/org.soshomophobie.wallet</url>
-    <url desc="Documentation">https://github.com/soshomophobie/org.soshomophobie.wallet</url>
-    <url desc="Support">https://github.com/soshomophobie/org.soshomophobie.wallet/issues</url>
+    <url desc="Main Extension Page">https://github.com/jonathandhn/org.jonathandhn.wallet</url>
+    <url desc="Documentation">https://github.com/jonathandhn/org.jonathandhn.wallet</url>
+    <url desc="Support">https://github.com/jonathandhn/org.jonathandhn.wallet/issues</url>
     <url desc="Licensing">http://www.gnu.org/licenses/agpl-3.0.html</url>
   </urls>
   <releaseDate>2025-11-27</releaseDate>

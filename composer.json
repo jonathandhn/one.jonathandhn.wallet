@@ -1,11 +1,11 @@
 {
-    "name": "org.soshomophobie.wallet/civi-wallet",
+    "name": "one.jonathandhn.wallet/civi-wallet",
     "description": "CiviCRM extension for Apple and Google Wallet",
     "license": "AGPL-3.0",
     "authors": [
         {
-            "name": "SOS homophobie",
-            "email": "sos@sos-homophobie.org"
+            "name": "Jonathan Dahan",
+            "email": "jonathan@dhn.one"
         }
     ],
     "require": {

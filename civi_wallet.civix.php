@@ -8,7 +8,7 @@
  */
 class CRM_Wallet_ExtensionUtil {
   const SHORT_NAME = 'civi_wallet';
-  const LONG_NAME = 'org.soshomophobie.wallet';
+  const LONG_NAME = 'one.jonathandhn.wallet';
   const CLASS_PREFIX = 'CRM_Wallet';
 
   /**

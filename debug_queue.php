@@ -29,7 +29,7 @@ if (count($participants) > 0) {
     // 4. Check Queue
     $queue = CRM_Queue_Service::singleton()->create([
         'type' => 'Sql',
-        'name' => 'org.soshomophobie.wallet.updates',
+        'name' => 'one.jonathandhn.wallet.updates',
         'runner' => 'task',
     ]);
     echo "Queue Size is now: " . $queue->numberOfItems() . "\n";

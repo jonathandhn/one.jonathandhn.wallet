@@ -77,7 +77,7 @@ if ($scriptsFile === true) {
 if (!class_exists('CRM_Wallet_Page_API')) {
     // Try to load it manually if extension autoloader isn't ready
     try {
-        $extPath = CRM_Extension_System::singleton()->getMapper()->keyToBasePath('org.soshomophobie.wallet');
+        $extPath = CRM_Extension_System::singleton()->getMapper()->keyToBasePath('one.jonathandhn.wallet');
         if ($extPath && file_exists($extPath . '/CRM/Wallet/Page/API.php')) {
             require_once $extPath . '/CRM/Wallet/Page/API.php';
         }
