@@ -79,7 +79,7 @@ The extension adds a "Wallet Settings" custom group to Events.
 ### Participant Workflow
 
 - Participants receive a download link in their email confirmation (requires inserting the `{wallet_links}` token in Message Templates).
-- Scanning the QR Code on the pass allows check-in (integrates with CiviMobile or standard QR lookup).
+- Scanning the QR Code on the pass allows check-in. The recommended app is **[Civi Scan Webapp](https://github.com/jonathandhn/one.jonathandhn.scan)**, or standard QR lookup.
 
 ## Visibility
 
