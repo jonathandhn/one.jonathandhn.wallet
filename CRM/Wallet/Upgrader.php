@@ -36,6 +36,22 @@ class CRM_Wallet_Upgrader extends CRM_Extension_Upgrader_Base
         return TRUE;
     }
 
+    public function upgrade_1002()
+    {
+        try {
+            // Update the Custom Group to be not public
+            // We use 'create' with ID (or name) to update existing records.
+            $group = civicrm_api3('CustomGroup', 'getsingle', ['name' => 'Wallet_Settings']);
+            civicrm_api3('CustomGroup', 'create', [
+                'id' => $group['id'],
+                'is_public' => 0,
+            ]);
+        } catch (Exception $e) {
+            $this->ctx->log->warning("Upgrade 1002: Could not find or update Wallet_Settings group. " . $e->getMessage());
+        }
+        return TRUE;
+    }
+
     private function createCustomFields()
     {
         // Check if Custom Group exists
@@ -49,6 +65,7 @@ class CRM_Wallet_Upgrader extends CRM_Extension_Upgrader_Base
                 'extends' => 'Event',
                 'style' => 'Inline',
                 'is_active' => 1,
+                'is_public' => 0, // Hidden from public forms
             ]);
         }
 

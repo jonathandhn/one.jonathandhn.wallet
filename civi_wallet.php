@@ -192,6 +192,7 @@ function civi_wallet_civicrm_check(&$messages)
 
 // --- Functions below this ship commented out. Uncomment as required. ---
 
+
 /**
  * Implements hook_civicrm_preProcess().
  *
