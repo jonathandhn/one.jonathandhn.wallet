@@ -47,9 +47,11 @@ jobs:
             --exclude 'client_secret_*.json' \
             --exclude 'service-account.json' \
             --exclude 'auth.json' \
-            ./ dist/civi-wallet/
+            --exclude 'dist' \
+            --exclude 'dist-bundled' \
+            ./ dist/one.jonathandhn.wallet/
           cd dist
-          zip -r civi-wallet-source.zip civi-wallet
+          zip -r civi-wallet-source.zip one.jonathandhn.wallet
 
       - name: Install production dependencies
         run: composer install --no-dev --prefer-dist --optimize-autoloader
@@ -82,10 +84,12 @@ jobs:
             --exclude 'client_secret_*.json' \
             --exclude 'service-account.json' \
             --exclude 'auth.json' \
-            ./ dist-bundled/civi-wallet/
-          cp -a dist-bundled/licenses dist-bundled/civi-wallet/licenses
+            --exclude 'dist' \
+            --exclude 'dist-bundled' \
+            ./ dist-bundled/one.jonathandhn.wallet/
+          cp -a dist-bundled/licenses dist-bundled/one.jonathandhn.wallet/licenses
           cd dist-bundled
-          zip -r civi-wallet-bundled.zip civi-wallet
+          zip -r civi-wallet-bundled.zip one.jonathandhn.wallet
 
       - name: Upload source artifact
         uses: actions/upload-artifact@v4

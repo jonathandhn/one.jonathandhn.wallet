@@ -40,3 +40,6 @@ auth.json
 .duckversions
 *.part
 *.sftp
+
+dist/
+dist-bundled/

@@ -54,7 +54,7 @@ class CRM_Wallet_Upgrader extends CRM_Extension_Upgrader_Base
         return TRUE;
     }
 
-    public function upgrade_1003()
+        public function upgrade_1003()
     {
         $this->ctx->log->info('Migrating wallet passes from participant_id to entity_id/entity_table');
         
@@ -69,15 +69,25 @@ class CRM_Wallet_Upgrader extends CRM_Extension_Upgrader_Base
             CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass ADD COLUMN entity_table VARCHAR(64) NULL AFTER id");
             CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass ADD COLUMN entity_id INT UNSIGNED NULL AFTER entity_table");
 
-            // Migrate data
-            CRM_Core_DAO::executeQuery("UPDATE civicrm_wallet_pass SET entity_table = 'civicrm_participant', entity_id = participant_id WHERE participant_id IS NOT NULL");
+            // Check if participant_id exists before migrating data from it
+            $hasParticipantId = CRM_Core_DAO::executeQuery("SHOW COLUMNS FROM civicrm_wallet_pass LIKE 'participant_id'")->fetch();
+            
+            if ($hasParticipantId) {
+                // Migrate data
+                CRM_Core_DAO::executeQuery("UPDATE civicrm_wallet_pass SET entity_table = 'civicrm_participant', entity_id = participant_id WHERE participant_id IS NOT NULL");
+            }
 
-            // Make columns NOT NULL
+            // Make columns NOT NULL (only for existing records where we migrated data, otherwise set a default for the rest just to pass constraint, or delete invalid ones)
+            // To be safe against empty rows, delete rows with no entity_id before making it NOT NULL
+            CRM_Core_DAO::executeQuery("DELETE FROM civicrm_wallet_pass WHERE entity_id IS NULL");
+            
             CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass MODIFY COLUMN entity_table VARCHAR(64) NOT NULL");
             CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass MODIFY COLUMN entity_id INT UNSIGNED NOT NULL");
 
             // Drop old column
-            CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass DROP COLUMN participant_id");
+            if ($hasParticipantId) {
+                CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass DROP COLUMN participant_id");
+            }
 
             // Update index
             try { CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass DROP INDEX index_participant_type"); } catch (Exception $e) {}
@@ -86,7 +96,6 @@ class CRM_Wallet_Upgrader extends CRM_Extension_Upgrader_Base
 
         return TRUE;
     }
-
     private function createCustomFields()
     {
         try {
