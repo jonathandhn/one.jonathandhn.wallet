@@ -245,6 +245,7 @@ return [
         'is_domain' => 1,
         'is_contact' => 0,
         'description' => 'Profile Update URL',
+    ],
     'wallet_barcode_membership' => [
         'group_name' => 'CiviWallet Settings',
         'group' => 'civi_wallet',

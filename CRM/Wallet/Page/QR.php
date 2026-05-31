@@ -29,14 +29,14 @@ class CRM_Wallet_Page_QR extends CRM_Core_Page
                 CRM_Utils_System::permissionDenied();
             }
             $contactId = $participant['contact_id'];
-        } else {
+        } elseif ($entity === 'membership') {
             if ($entityId) {
                 $membership = \Civi\Api4\Membership::get(FALSE)
                     ->addWhere('id', '=', $entityId)
                     ->execute()->first();
                 if (!$membership) CRM_Utils_System::permissionDenied();
                 $contactId = $membership['contact_id'];
-            } else if ($contactId) {
+            } elseif ($contactId) {
                 $membership = \Civi\Api4\Membership::get(FALSE)
                     ->addWhere('contact_id', '=', $contactId)
                     ->addOrderBy('end_date', 'DESC')
@@ -47,11 +47,11 @@ class CRM_Wallet_Page_QR extends CRM_Core_Page
             } else {
                 CRM_Utils_System::permissionDenied();
             }
-        } else if ($entity === 'donor') {
+        } elseif ($entity === 'donor') {
             if ($contactId) {
                 // For donor, entityId IS contactId in context of barcode (unless otherwise specified)
                 $entityId = $contactId; 
-            } else if ($entityId) {
+            } elseif ($entityId) {
                 $contactId = $entityId;
             } else {
                 CRM_Utils_System::permissionDenied();
@@ -79,7 +79,7 @@ class CRM_Wallet_Page_QR extends CRM_Core_Page
                 $barcodeValue = $entityId;
             }
             $entityType = 'Participant';
-        } else {
+        } elseif ($entity === 'membership') {
             $barcodeToken = Civi::settings()->get('wallet_barcode_membership') ?: '{contact.id}';
             if (class_exists('\Civi\Token\TokenProcessor')) {
                 $tokenProcessor = new \Civi\Token\TokenProcessor(\Civi::dispatcher(), ['smarty' => false]);
@@ -91,7 +91,7 @@ class CRM_Wallet_Page_QR extends CRM_Core_Page
                 $barcodeValue = $contactId;
             }
             $entityType = 'Membership';
-        } else if ($entity === 'donor') {
+        } elseif ($entity === 'donor') {
             $barcodeToken = Civi::settings()->get('wallet_barcode_donor') ?: '{contact.id}';
             if (class_exists('\Civi\Token\TokenProcessor')) {
                 $tokenProcessor = new \Civi\Token\TokenProcessor(\Civi::dispatcher(), ['smarty' => false]);

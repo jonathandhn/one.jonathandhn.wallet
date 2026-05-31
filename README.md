@@ -87,12 +87,12 @@ The extension adds a "Wallet Settings" custom group to Events.
 ### Participant Workflow
 
 - Participants receive a download link or QR Code in their email confirmation by inserting the following tokens in Message Templates:
-  - `{wallet.links_membership}` / `{wallet.links_participant}` / `{wallet.links_donor}`: Outputs HTML buttons ("Ajouter à Apple Wallet", etc.)
-  - `{wallet.qr_membership}` / `{wallet.qr_participant}` / `{wallet.qr_donor}`: Outputs a native 150x150 QR code image (`<img>` tag) for printing or scanning.
+  - `{contact.wallet_links}` / `{participant.wallet_links}` / `{contact.wallet_links_donor}`: Outputs HTML buttons ("Ajouter à Apple Wallet", etc.)
+  - `{contact.qr_membership}` / `{participant.qr_participant}` / `{contact.qr_donor}`: Outputs a native 150x150 QR code image (`<img>` tag) for printing or scanning.
 - Scanning the QR Code on the pass allows check-in. The recommended app is **[Civi Scan Webapp](https://github.com/jonathandhn/one.jonathandhn.scan)**, or standard QR lookup.
 
 ### Donor Cards
-You can generate a pure Donor card for any Contact using the `{wallet.links_donor}` token. 
+You can generate a pure Donor card for any Contact using the `{contact.wallet_links_donor}` token. 
 This card is independent of memberships. By default, it automatically fetches and displays the last 3 completed Contributions (Donations) on the back of the Apple Pass or as text modules on the Google Pass, along with quick links to update their profile or make a new donation.
 
 ## Developer API (Hooks)

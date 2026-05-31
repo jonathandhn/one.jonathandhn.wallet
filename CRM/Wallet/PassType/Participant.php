@@ -473,8 +473,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
                         ]
                     ]
                 ]
-            ],
-        ];
+            ];
 
         if ($customColor) {
             $classMetadata['hexBackgroundColor'] = $customColor;
@@ -537,6 +536,13 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             'state' => 'ACTIVE',
             'ticketHolderName' => $contact['display_name'],
             'textModulesData' => $textModulesData,
+            'barcode' => [
+                'type' => 'QR_CODE',
+                'value' => $barcodeValue,
+                'alternateText' => is_numeric($barcodeValue) ? (string)$barcodeValue : ''
+            ]
+        ];
+
         $uris = [];
         if ($websiteUrl) {
             $uris[] = [
