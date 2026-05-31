@@ -44,6 +44,14 @@ cp extensions/one.jonathandhn.wallet/extern/api.php /path/to/webroot/civi-wallet
 
 Navigate to **Administer > CiviEvent > Wallet Settings**.
 
+### Geocoding & GPS (Optional but recommended)
+
+To display passes dynamically on the user's lock screen when they are near the event venue, CiviCRM must generate GPS coordinates for event locations. 
+If your CiviCRM instance does not automatically generate `geo_code_1` (Latitude) and `geo_code_2` (Longitude) for addresses, you must enable a Geocoding provider:
+1. Navigate to **Administer > System Settings > Mapping and Geocoding** (`civicrm/admin/setting/mapping`).
+2. Select a **Geocoding Provider** (e.g., Google, OpenStreetMap) and enter your API Key if required.
+3. Once enabled, any new or updated Event Location will automatically fetch and save its GPS coordinates, which will then be passed to Apple and Google Wallet.
+
 ### Apple Wallet Setup
 
 To generate Apple Passes, you need an Apple Developer Account and a Pass Type Certicate.

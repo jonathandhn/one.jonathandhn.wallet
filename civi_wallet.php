@@ -57,6 +57,12 @@ function civi_wallet_civicrm_post($op, $objectName, $objectId, &$objectRef)
         } elseif ($objectName == 'Participant') {
             // Update pass for this participant
             CRM_Wallet_BAO_Pass::updatePasses('Participant', $objectId);
+        } elseif ($objectName == 'Membership') {
+            // Update pass for this membership's contact
+            CRM_Wallet_BAO_Pass::updatePasses('Membership', $objectId);
+        } elseif ($objectName == 'Contact') {
+            // Update pass for this contact
+            CRM_Wallet_BAO_Pass::updatePasses('Contact', $objectId);
         }
     }
 }
@@ -187,6 +193,40 @@ function civi_wallet_civicrm_check(&$messages)
             \Psr\Log\LogLevel::WARNING,
             'fa-exclamation-triangle'
         );
+    }
+}
+
+/**
+ * Implements hook_civicrm_tokens().
+ */
+function civi_wallet_civicrm_tokens(&$tokens)
+{
+    $tokens['contact'] = $tokens['contact'] ?? [];
+    $tokens['contact']['wallet_links'] = E::ts('Wallet Links (Membership)');
+
+    $tokens['participant'] = $tokens['participant'] ?? [];
+    $tokens['participant']['wallet_links'] = E::ts('Wallet Links (Event Ticket)');
+}
+
+/**
+ * Implements hook_civicrm_tokenValues().
+ */
+function civi_wallet_civicrm_tokenValues(&$values, $cids, $job = null, $tokens = [], $context = null)
+{
+    // Membership Tokens (Contact context)
+    if (!empty($tokens['contact']) && in_array('wallet_links', $tokens['contact'])) {
+        foreach ($cids as $cid) {
+            $cs = CRM_Contact_BAO_Contact_Utils::generateChecksum($cid);
+            
+            // Generate absolute URLs for emails
+            $appleUrl = CRM_Utils_System::url('civicrm/wallet/pass', "cid={$cid}&cs={$cs}&type=apple", true, null, false, true);
+            $googleUrl = CRM_Utils_System::url('civicrm/wallet/pass', "cid={$cid}&cs={$cs}&type=google", true, null, false, true);
+            
+            $html = "<a href='{$appleUrl}' style='display:inline-block; margin-right:10px;'><img src='https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Add_to_Apple_Wallet_logo.svg/320px-Add_to_Apple_Wallet_logo.svg.png' height='40' alt='Ajouter à Apple Wallet'></a>";
+            $html .= "<a href='{$googleUrl}' style='display:inline-block;'><img src='https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Add_to_Google_Wallet_badge.svg/320px-Add_to_Google_Wallet_badge.svg.png' height='40' alt='Ajouter à Google Wallet'></a>";
+            
+            $values[$cid]['contact.wallet_links'] = $html;
+        }
     }
 }
 

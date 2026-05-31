@@ -15,19 +15,25 @@
         <autoincrement>true</autoincrement>
       </primaryKey>
       <field>
-        <name>participant_id</name>
+        <name>entity_table</name>
+        <type>varchar</type>
+        <length>64</length>
+        <required>true</required>
+        <comment>Name of the referenced CiviCRM table</comment>
+        <add>1.1</add>
+      </field>
+      <field>
+        <name>entity_id</name>
         <type>int unsigned</type>
         <required>true</required>
-        <comment>FK to Participant ID</comment>
-        <add>1.0</add>
+        <comment>Foreign key to the referenced CiviCRM table</comment>
+        <add>1.1</add>
       </field>
-      <foreignKey>
-        <name>participant_id</name>
-        <table>civicrm_participant</table>
-        <key>id</key>
-        <onDelete>CASCADE</onDelete>
-        <add>1.0</add>
-      </foreignKey>
+      <dynamicForeignKey>
+        <idColumn>entity_id</idColumn>
+        <typeColumn>entity_table</typeColumn>
+        <add>1.1</add>
+      </dynamicForeignKey>
       <field>
         <name>type</name>
         <type>varchar</type>
@@ -60,11 +66,12 @@
         <add>1.0</add>
       </field>
       <index>
-        <name>index_participant_type</name>
-        <fieldName>participant_id</fieldName>
+        <name>index_entity_type</name>
+        <fieldName>entity_table</fieldName>
+        <fieldName>entity_id</fieldName>
         <fieldName>type</fieldName>
         <unique>true</unique>
-        <add>1.0</add>
+        <add>1.1</add>
       </index>
     </table>
   </tables>

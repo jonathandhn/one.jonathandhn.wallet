@@ -89,6 +89,32 @@
     </tr>
   </table>
 
+  <h3>{ts}Membership Settings{/ts}</h3>
+  <table class="form-layout-compressed">
+    <tr class="crm-wallet-membership-renew-url-form-block-wallet_membership_renew_url">
+      <td class="label">{$form.wallet_membership_renew_url.label}</td>
+      <td>
+        {$form.wallet_membership_renew_url.html}
+        <div class="description">{ts}Example: civicrm/contribute/transact?reset=1&id=1{/ts}</div>
+      </td>
+    </tr>
+    <tr class="crm-wallet-membership-profile-url-form-block-wallet_membership_profile_url">
+      <td class="label">{$form.wallet_membership_profile_url.label}</td>
+      <td>
+        {$form.wallet_membership_profile_url.html}
+        <div class="description">{ts}Example: civicrm/profile/edit?reset=1&gid=1{/ts}</div>
+      </td>
+    </tr>
+    <tr class="crm-wallet-color-membership-active-form-block-wallet_color_membership_active">
+      <td class="label">{$form.wallet_color_membership_active.label}</td>
+      <td>{$form.wallet_color_membership_active.html}</td>
+    </tr>
+    <tr class="crm-wallet-color-membership-expired-form-block-wallet_color_membership_expired">
+      <td class="label">{$form.wallet_color_membership_expired.label}</td>
+      <td>{$form.wallet_color_membership_expired.html}</td>
+    </tr>
+  </table>
+
   <div class="crm-submit-buttons">
     {include file="CRM/common/formButtons.tpl" location="bottom"}
   </div>

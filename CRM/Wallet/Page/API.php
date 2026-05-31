@@ -16,10 +16,17 @@ class CRM_Wallet_Page_API extends CRM_Core_Page
 
 
 
-        // Find the API path starting with /v1/
+        // Find the API path starting with /v1/ or /redirect
         $pos = strpos($uri, '/v1/');
+        $posRedirect = strpos($uri, '/redirect');
+        
+        if ($posRedirect !== false) {
+            $this->handleRedirect();
+            CRM_Utils_System::civiExit();
+        }
+
         if ($pos === false) {
-            // Not a valid Apple Wallet API request
+            // Not a valid API request
             http_response_code(404);
             CRM_Utils_System::civiExit();
         }
@@ -233,13 +240,11 @@ class CRM_Wallet_Page_API extends CRM_Core_Page
         // We need to make sure BAO doesn't re-generate serial number or auth token if they exist.
         // The current BAO implementation handles this (checks DB first).
 
-        // However, BAO::createApplePass takes participantId, not serialNumber.
-        // We need to reverse lookup participantId from serialNumber.
-
-        $participantId = $pass->participant_id;
+        $entityId = $pass->entity_id;
+        $entityTable = $pass->entity_table;
 
         try {
-            $content = CRM_Wallet_BAO_Pass::createApplePass($participantId);
+            $content = CRM_Wallet_BAO_Pass::createApplePass($entityTable, $entityId);
 
             header('Pragma: no-cache');
             header('Content-Type: application/vnd.apple.pkpass');
@@ -266,8 +271,10 @@ class CRM_Wallet_Page_API extends CRM_Core_Page
 
     private function getPass($serialNumber, $passTypeId)
     {
-        // TODO: Verify passTypeId matches 'pass.sos-homophobie.pkpass'
-
+        $expectedPassTypeId = \Civi::settings()->get('wallet_apple_pass_type_id');
+        if ($expectedPassTypeId && $passTypeId !== $expectedPassTypeId) {
+            return null;
+        }
         $dao = CRM_Core_DAO::executeQuery("SELECT * FROM civicrm_wallet_pass WHERE serial_number = %1", [
             1 => [$serialNumber, 'String']
         ]);
@@ -275,5 +282,45 @@ class CRM_Wallet_Page_API extends CRM_Core_Page
             return $dao;
         }
         return null;
+    }
+
+    private function handleRedirect()
+    {
+        $token = CRM_Utils_Request::retrieve('token', 'String');
+        $action = CRM_Utils_Request::retrieve('action', 'String');
+
+        if (!$token || !$action) {
+            CRM_Core_Error::debug_log_message("Wallet Redirect Error: Missing parameters");
+            CRM_Utils_System::civiExit();
+        }
+
+        // Find the pass by token
+        $dao = CRM_Core_DAO::executeQuery("SELECT * FROM civicrm_wallet_pass WHERE authentication_token = %1", [
+            1 => [$token, 'String']
+        ]);
+
+        if (!$dao->fetch() || $dao->entity_table !== 'civicrm_contact') {
+            CRM_Core_Error::debug_log_message("Wallet Redirect Error: Invalid token or not a contact pass");
+            echo "Ce lien n'est plus valide ou le pass n'existe pas.";
+            CRM_Utils_System::civiExit();
+        }
+
+        $contactId = $dao->entity_id;
+
+        // Generate Checksum
+        $cs = CRM_Contact_BAO_Contact_Utils::generateChecksum($contactId);
+
+        // Get Base URLs from settings
+        $renewUrlBase = Civi::settings()->get('wallet_membership_renew_url') ?: 'civicrm/contribute/transact?reset=1&id=1';
+        $profileUrlBase = Civi::settings()->get('wallet_membership_profile_url') ?: 'civicrm/profile/edit?reset=1&gid=1';
+
+        $baseUrl = ($action === 'renew') ? $renewUrlBase : $profileUrlBase;
+
+        // Append cid and cs
+        $separator = (strpos($baseUrl, '?') === false) ? '?' : '&';
+        $finalUrl = CRM_Utils_System::url($baseUrl, "cid={$contactId}&cs={$cs}", true, null, false);
+
+        // Redirect
+        CRM_Utils_System::redirect($finalUrl);
     }
 }

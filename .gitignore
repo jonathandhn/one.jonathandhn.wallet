@@ -27,6 +27,9 @@ auth.json
 
 # IDEs & Editors
 .idea/
+.antigravity/
+.codex/
+.agents/
 .vscode/
 *.swp
 *.swo

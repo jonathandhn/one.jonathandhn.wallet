@@ -52,6 +52,39 @@ class CRM_Wallet_Upgrader extends CRM_Extension_Upgrader_Base
         return TRUE;
     }
 
+    public function upgrade_1003()
+    {
+        $this->ctx->log->info('Migrating wallet passes from participant_id to entity_id/entity_table');
+        
+        // Check if entity_table exists
+        $dao = CRM_Core_DAO::executeQuery("SHOW COLUMNS FROM civicrm_wallet_pass LIKE 'entity_table'");
+        if (!$dao->fetch()) {
+            // Drop foreign key if exists
+            try { CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass DROP FOREIGN KEY FK_civicrm_wallet_pass_participant_id"); } catch (Exception $e) {}
+            try { CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass DROP FOREIGN KEY civicrm_wallet_pass_ibfk_1"); } catch (Exception $e) {}
+
+            // Add new columns
+            CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass ADD COLUMN entity_table VARCHAR(64) NULL AFTER id");
+            CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass ADD COLUMN entity_id INT UNSIGNED NULL AFTER entity_table");
+
+            // Migrate data
+            CRM_Core_DAO::executeQuery("UPDATE civicrm_wallet_pass SET entity_table = 'civicrm_participant', entity_id = participant_id WHERE participant_id IS NOT NULL");
+
+            // Make columns NOT NULL
+            CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass MODIFY COLUMN entity_table VARCHAR(64) NOT NULL");
+            CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass MODIFY COLUMN entity_id INT UNSIGNED NOT NULL");
+
+            // Drop old column
+            CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass DROP COLUMN participant_id");
+
+            // Update index
+            try { CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass DROP INDEX index_participant_type"); } catch (Exception $e) {}
+            CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass ADD UNIQUE INDEX index_entity_type (entity_table, entity_id, type)");
+        }
+
+        return TRUE;
+    }
+
     private function createCustomFields()
     {
         // Check if Custom Group exists

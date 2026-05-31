@@ -20,6 +20,10 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting
         'wallet_image_logo' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
         'wallet_website_url' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
         'wallet_contact_url' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
+        'wallet_color_membership_active' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
+        'wallet_color_membership_expired' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
+        'wallet_membership_renew_url' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
+        'wallet_membership_profile_url' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
     ];
 
     public function buildQuickForm()
@@ -76,6 +80,12 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting
 
         $this->add('file', 'wallet_image_icon_upload', E::ts('Icon (icon.png)'));
         $this->add('file', 'wallet_image_logo_upload', E::ts('Logo (logo.png)'));
+
+        // --- Membership Settings ---
+        $this->add('text', 'wallet_membership_renew_url', E::ts('Membership Renew URL'), ['size' => 50, 'placeholder' => 'civicrm/contribute/transact?reset=1&id=1']);
+        $this->add('text', 'wallet_membership_profile_url', E::ts('Profile Update URL'), ['size' => 50, 'placeholder' => 'civicrm/profile/edit?reset=1&gid=1']);
+        $this->add('color', 'wallet_color_membership_active', E::ts('Membership Active Color'), ['default' => '#53b459']);
+        $this->add('color', 'wallet_color_membership_expired', E::ts('Membership Expired Color'), ['default' => '#a0a0a0']);
 
         parent::buildQuickForm();
     }
@@ -137,6 +147,10 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting
             'wallet_color_background',
             'wallet_color_foreground',
             'wallet_color_label',
+            'wallet_color_membership_active',
+            'wallet_color_membership_expired',
+            'wallet_membership_renew_url',
+            'wallet_membership_profile_url',
         ];
 
         foreach ($settingsToSave as $setting) {
