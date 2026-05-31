@@ -14,8 +14,8 @@ return [
         'description' => 'Path to Apple Wallet Certificate (.p12)',
     ],
     'wallet_barcode_donor' => [
-        'group_name' => 'CiviWallet',
-        'group' => 'wallet',
+        'group_name' => 'CiviWallet Settings',
+        'group' => 'civi_wallet',
         'name' => 'wallet_barcode_donor',
         'type' => 'String',
         'html_type' => 'Text',
@@ -23,8 +23,8 @@ return [
         'add' => '1.4',
         'is_domain' => 1,
         'is_contact' => 0,
-        'description' => E::ts('Barcode Token for Donor Cards'),
-        'help_text' => E::ts('Token evaluated to generate the QR code on Donor cards. Default is {contact.id}.'),
+        'description' => 'Barcode Token for Donor Cards',
+        'help_text' => 'Token evaluated to generate the QR code on Donor cards. Default is {contact.id}.',
     ],
     'wallet_apple_cert_password' => [
         'group_name' => 'CiviWallet Settings',
