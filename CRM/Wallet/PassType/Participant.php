@@ -25,8 +25,11 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
         $defaultUrl = CRM_Utils_System::baseCMSURL();
 
         $orgName = Civi::settings()->get('wallet_org_name') ?: $defaultOrgName;
-        $websiteUrl = Civi::settings()->get('wallet_website_url') ?: rtrim($defaultUrl, '/');
-        $contactUrl = Civi::settings()->get('wallet_contact_url') ?: rtrim($defaultUrl, '/') . '/contact';
+        $websiteUrl = Civi::settings()->get('wallet_website_url');
+        $contactUrl = Civi::settings()->get('wallet_contact_url');
+
+        if ($websiteUrl && !preg_match("~^(?:f|ht)tps?://~i", $websiteUrl)) $websiteUrl = "https://" . $websiteUrl;
+        if ($contactUrl && !preg_match("~^(?:f|ht)tps?://~i", $contactUrl)) $contactUrl = "https://" . $contactUrl;
 
         if (!$certPath || !file_exists($certPath)) {
             throw new Exception("Apple Wallet Certificate not configured or not found.");
@@ -121,19 +124,23 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             'value' => $orgName,
         ];
 
-        $backFields[] = [
-            'key' => 'website',
-            'label' => 'Informations',
-            'value' => $websiteUrl,
-            'attributedValue' => "<a href='$websiteUrl'>$websiteUrl</a>",
-        ];
+        if ($websiteUrl) {
+            $backFields[] = [
+                'key' => 'website',
+                'label' => 'Informations',
+                'value' => $websiteUrl,
+                'attributedValue' => "<a href='$websiteUrl'>$websiteUrl</a>",
+            ];
+        }
 
-        $backFields[] = [
-            'key' => 'contact',
-            'label' => 'Contact',
-            'value' => $contactUrl,
-            'attributedValue' => "<a href='$contactUrl'>$contactUrl</a>",
-        ];
+        if ($contactUrl) {
+            $backFields[] = [
+                'key' => 'contact',
+                'label' => 'Contact',
+                'value' => $contactUrl,
+                'attributedValue' => "<a href='$contactUrl'>$contactUrl</a>",
+            ];
+        }
 
         $auxiliaryFields = [
             [
@@ -144,10 +151,11 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
         ];
 
         if (!empty($participant['fee_level'])) {
+            $feeLevel = is_array($participant['fee_level']) ? implode(', ', $participant['fee_level']) : $participant['fee_level'];
             $auxiliaryFields[] = [
                 'key' => 'fee-level',
                 'label' => 'BILLET',
-                'value' => strip_tags(str_replace('&nbsp;', ' ', $participant['fee_level'])),
+                'value' => strip_tags(str_replace('&nbsp;', ' ', $feeLevel)),
                 'changeMessage' => 'Votre billet a été mis à jour : %@',
             ];
         }
@@ -159,7 +167,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             'passTypeIdentifier' => $passTypeIdentifier,
             'serialNumber' => $serialNumber,
             'authenticationToken' => $authenticationToken,
-            'webServiceURL' => CRM_Utils_System::baseCMSURL() . 'civi-wallet-api.php',
+            'webServiceURL' => rtrim(CRM_Utils_System::baseCMSURL(), '/') . '/civicrm/wallet/api',
             'teamIdentifier' => $teamIdentifier,
             'backgroundColor' => Civi::settings()->get('wallet_color_background') ?: 'rgb(83,180,89)',
             'foregroundColor' => Civi::settings()->get('wallet_color_foreground') ?: 'rgb(255,255,255)',
@@ -262,9 +270,9 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
 
         $issuerId = Civi::settings()->get('wallet_google_issuer_id');
         $credentialsFile = Civi::settings()->get('wallet_google_credentials');
-        $orgName = Civi::settings()->get('wallet_org_name') ?: 'SOS homophobie';
-        $websiteUrl = Civi::settings()->get('wallet_website_url') ?: 'https://www.sos-homophobie.org';
-        $contactUrl = Civi::settings()->get('wallet_contact_url') ?: 'https://www.sos-homophobie.org/nous-contacter';
+        $orgName = Civi::settings()->get('wallet_org_name') ?: 'Organisation';
+        $websiteUrl = Civi::settings()->get('wallet_website_url');
+        $contactUrl = Civi::settings()->get('wallet_contact_url');
 
         if ($websiteUrl && !preg_match("~^(?:f|ht)tps?://~i", $websiteUrl)) $websiteUrl = "https://" . $websiteUrl;
         if ($contactUrl && !preg_match("~^(?:f|ht)tps?://~i", $contactUrl)) $contactUrl = "https://" . $contactUrl;
@@ -387,20 +395,26 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
                 ]
             ],
             'reviewStatus' => 'UNDER_REVIEW',
-            'logo' => [
-                'sourceUri' => ['uri' => $logoUrl]
-            ],
-            'heroImage' => [
-                'sourceUri' => ['uri' => $heroUrl]
-            ],
             'hexBackgroundColor' => Civi::settings()->get('wallet_color_background') ?: '#53b459',
             'dateTime' => [
                 'start' => date('Y-m-d\TH:i:s', strtotime($event['start_date'])),
                 'end' => !empty($event['end_date']) ? date('Y-m-d\TH:i:s', strtotime($event['end_date'])) : date('Y-m-d\TH:i:s', strtotime($event['start_date'] . ' + 1 day')),
             ],
-            'classTemplateInfo' => [
-                'cardTemplateOverride' => [
-                    'cardRowTemplateInfos' => [
+        ];
+
+        $imagesPath = \Civi::paths()->getPath('[one.jonathandhn.wallet]/resources/images/');
+        if (file_exists($imagesPath . 'icon.png')) {
+            $classMetadata['logo'] = ['sourceUri' => ['uri' => $logoUrl]];
+        }
+        
+        $hasCustomHero = ($heroUrl !== $extUrl . '/resources/images/logo.png?v=' . $timestamp);
+        if ($hasCustomHero || file_exists($imagesPath . 'logo.png')) {
+            $classMetadata['heroImage'] = ['sourceUri' => ['uri' => $heroUrl]];
+        }
+
+        $classMetadata['classTemplateInfo'] = [
+            'cardTemplateOverride' => [
+                'cardRowTemplateInfos' => [
                         [
                             'twoItems' => [
                                 'startItem' => [
@@ -472,9 +486,10 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
         ];
 
         if (!empty($participant['fee_level'])) {
+            $feeLevel = is_array($participant['fee_level']) ? implode(', ', $participant['fee_level']) : $participant['fee_level'];
             $textModulesData[] = [
                 'header' => 'Billet',
-                'body' => strip_tags(str_replace('&nbsp;', ' ', $participant['fee_level']))
+                'body' => strip_tags(str_replace('&nbsp;', ' ', $feeLevel))
             ];
         }
 
@@ -483,25 +498,32 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             'classId' => $classId,
             'state' => 'ACTIVE',
             'ticketHolderName' => $contact['display_name'],
-            'heroImage' => [
-                'sourceUri' => ['uri' => $heroUrl]
-            ],
             'textModulesData' => $textModulesData,
-            'linksModuleData' => [
-                'uris' => [
-                    [
-                        'uri' => $websiteUrl,
-                        'description' => $prettyWebsiteUrl ?: $websiteUrl,
-                        'id' => 'website_link'
-                    ],
-                    [
-                        'uri' => $contactUrl,
-                        'description' => E::ts('Contact'),
-                        'id' => 'contact_link'
-                    ]
-                ]
-            ],
-            'barcode' => [
+        $uris = [];
+        if ($websiteUrl) {
+            $uris[] = [
+                'uri' => $websiteUrl,
+                'description' => $prettyWebsiteUrl ?: $websiteUrl,
+                'id' => 'website_link_v2'
+            ];
+        }
+        if ($contactUrl) {
+            $uris[] = [
+                'uri' => $contactUrl,
+                'description' => E::ts('Contact'),
+                'id' => 'contact_link_v2'
+            ];
+        }
+
+        if (!empty($uris)) {
+            $objectMetadata['linksModuleData'] = ['uris' => $uris];
+        }
+
+        if ($hasCustomHero || file_exists($imagesPath . 'logo.png')) {
+            $objectMetadata['heroImage'] = ['sourceUri' => ['uri' => $heroUrl]];
+        }
+
+        $objectMetadata['barcode'] = [
                 'type' => 'QR_CODE',
                 'value' => $qrCodeContent,
                 'alternateText' => (string) $participant['id']
@@ -525,8 +547,9 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             }
         }
 
+        $creds = json_decode(file_get_contents($credentialsFile), true);
         $claims = [
-            'iss' => $client->getConfig('client_email'),
+            'iss' => $creds['client_email'],
             'aud' => 'google',
             'typ' => 'savetowallet',
             'iat' => time(),
@@ -537,10 +560,8 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             ]
         ];
 
-        $key = json_decode(file_get_contents($credentialsFile), true)['private_key'];
-
         if (class_exists('\Firebase\JWT\JWT')) {
-            $token = \Firebase\JWT\JWT::encode($claims, $key, 'RS256');
+            $token = \Firebase\JWT\JWT::encode($claims, $creds['private_key'], 'RS256');
         } else {
             throw new Exception("Firebase JWT library not found. Run composer update.");
         }

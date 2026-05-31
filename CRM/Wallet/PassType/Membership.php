@@ -71,7 +71,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
         $endDateStr = !empty($membership['end_date']) ? date('d M Y', strtotime($membership['end_date'])) : 'À vie';
 
         // Base URL for redirection
-        $apiBaseUrl = rtrim(CRM_Utils_System::baseCMSURL(), '/') . '/civi-wallet-api.php/redirect';
+        $apiBaseUrl = rtrim(CRM_Utils_System::baseCMSURL(), '/') . '/civicrm/wallet/api/redirect';
         $renewUrl = $apiBaseUrl . '?action=renew&token=' . $authenticationToken;
         $profileUrl = $apiBaseUrl . '?action=profile&token=' . $authenticationToken;
 
@@ -83,7 +83,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
             'passTypeIdentifier' => $passTypeIdentifier,
             'serialNumber' => $serialNumber,
             'authenticationToken' => $authenticationToken,
-            'webServiceURL' => CRM_Utils_System::baseCMSURL() . 'civi-wallet-api.php',
+            'webServiceURL' => rtrim(CRM_Utils_System::baseCMSURL(), '/') . '/civicrm/wallet/api',
             'teamIdentifier' => $teamIdentifier,
             'backgroundColor' => $bgColor,
             'foregroundColor' => 'rgb(255,255,255)',
@@ -154,7 +154,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
         if (file_exists($imagesPath . 'icon@3x.png')) $pass->addFile($imagesPath . 'icon@3x.png');
         if (file_exists($imagesPath . 'logo.png')) $pass->addFile($imagesPath . 'logo.png');
 
-        $pass->create(true);
+        return $pass->create();
     }
 
     public static function createGooglePass($entityId)
@@ -182,8 +182,8 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
         
         $domain = \Civi\Api4\Domain::get(FALSE)->addWhere('id', '=', CRM_Core_Config::domainID())->execute()->first();
         $orgName = Civi::settings()->get('wallet_org_name') ?: ($domain['name'] ?? 'Organisation');
-        $websiteUrl = Civi::settings()->get('wallet_website_url') ?: CRM_Utils_System::baseCMSURL();
-        $contactUrl = Civi::settings()->get('wallet_contact_url') ?: CRM_Utils_System::baseCMSURL();
+        $websiteUrl = Civi::settings()->get('wallet_website_url');
+        $contactUrl = Civi::settings()->get('wallet_contact_url');
 
         if ($websiteUrl && !preg_match("~^(?:f|ht)tps?://~i", $websiteUrl)) $websiteUrl = "https://" . $websiteUrl;
         if ($contactUrl && !preg_match("~^(?:f|ht)tps?://~i", $contactUrl)) $contactUrl = "https://" . $contactUrl;
@@ -253,7 +253,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
             ]);
         }
 
-        $apiBaseUrl = rtrim(CRM_Utils_System::baseCMSURL(), '/') . '/civi-wallet-api.php/redirect';
+        $apiBaseUrl = rtrim(CRM_Utils_System::baseCMSURL(), '/') . '/civicrm/wallet/api/redirect';
         $renewUrl = $apiBaseUrl . '?action=renew&token=' . $authenticationToken;
         $profileUrl = $apiBaseUrl . '?action=profile&token=' . $authenticationToken;
 
@@ -284,32 +284,39 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
                     'header' => 'Valide jusqu\'au',
                     'body' => $endDateStr
                 ]
-            ],
-            'linksModuleData' => [
-                'uris' => [
-                    [
-                        'uri' => $renewUrl,
-                        'description' => 'Renouveler mon adhésion',
-                        'id' => 'renew_link'
-                    ],
-                    [
-                        'uri' => $profileUrl,
-                        'description' => 'Mettre à jour mon profil',
-                        'id' => 'profile_link'
-                    ],
-                    [
-                        'uri' => $websiteUrl,
-                        'description' => 'Site Internet',
-                        'id' => 'website_link'
-                    ],
-                    [
-                        'uri' => $contactUrl,
-                        'description' => 'Contact',
-                        'id' => 'contact_link'
-                    ]
-                ]
             ]
         ];
+
+        $uris = [];
+        $uris[] = [
+            'uri' => $renewUrl,
+            'description' => 'Renouveler mon adhésion',
+            'id' => 'renew_link_v2'
+        ];
+        $uris[] = [
+            'uri' => $profileUrl,
+            'description' => 'Mettre à jour mon profil',
+            'id' => 'profile_link_v2'
+        ];
+
+        if ($websiteUrl) {
+            $uris[] = [
+                'uri' => $websiteUrl,
+                'description' => 'Site Internet',
+                'id' => 'website_link_v2'
+            ];
+        }
+        if ($contactUrl) {
+            $uris[] = [
+                'uri' => $contactUrl,
+                'description' => 'Contact',
+                'id' => 'contact_link_v2'
+            ];
+        }
+
+        if (!empty($uris)) {
+            $objectMetadata['linksModuleData'] = ['uris' => $uris];
+        }
 
         $objectObj = new \Google\Service\Walletobjects\LoyaltyObject($objectMetadata);
 
@@ -324,8 +331,9 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
             }
         }
 
+        $creds = json_decode(file_get_contents($credentialsFile), true);
         $claims = [
-            'iss' => $client->getConfig('client_email'),
+            'iss' => $creds['client_email'],
             'aud' => 'google',
             'typ' => 'savetowallet',
             'iat' => time(),
@@ -336,9 +344,8 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
             ]
         ];
 
-        $key = json_decode(file_get_contents($credentialsFile), true)['private_key'];
         if (class_exists('\Firebase\JWT\JWT')) {
-            $token = \Firebase\JWT\JWT::encode($claims, $key, 'RS256');
+            $token = \Firebase\JWT\JWT::encode($claims, $creds['private_key'], 'RS256');
         } else {
             throw new Exception("Firebase JWT library not found.");
         }
