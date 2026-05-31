@@ -201,11 +201,13 @@ function civi_wallet_civicrm_check(&$messages)
  */
 function civi_wallet_civicrm_tokens(&$tokens)
 {
-    $tokens['contact'] = $tokens['contact'] ?? [];
-    $tokens['contact']['wallet_links'] = E::ts('Wallet Links (Membership)');
-
-    $tokens['participant'] = $tokens['participant'] ?? [];
-    $tokens['participant']['wallet_links'] = E::ts('Wallet Links (Event Ticket)');
+    $tokens['wallet'] = $tokens['wallet'] ?? [];
+    $tokens['wallet']['links_membership'] = E::ts('Wallet Links (Membership)');
+    $tokens['wallet']['links_participant'] = E::ts('Wallet Links (Event Ticket)');
+    $tokens['wallet']['links_donor'] = E::ts('Wallet Links (Donor Card)');
+    $tokens['wallet']['qr_membership'] = E::ts('QR Code (Membership)');
+    $tokens['wallet']['qr_participant'] = E::ts('QR Code (Event Ticket)');
+    $tokens['wallet']['qr_donor'] = E::ts('QR Code (Donor Card)');
 }
 
 /**
@@ -213,19 +215,69 @@ function civi_wallet_civicrm_tokens(&$tokens)
  */
 function civi_wallet_civicrm_tokenValues(&$values, $cids, $job = null, $tokens = [], $context = null)
 {
-    // Membership Tokens (Contact context)
-    if (!empty($tokens['contact']) && in_array('wallet_links', $tokens['contact'])) {
+    $needsLinks = !empty($tokens['wallet']) && (in_array('links_membership', $tokens['wallet']) || in_array('links_participant', $tokens['wallet']) || in_array('links_donor', $tokens['wallet']));
+    $needsQr = !empty($tokens['wallet']) && (in_array('qr_membership', $tokens['wallet']) || in_array('qr_participant', $tokens['wallet']) || in_array('qr_donor', $tokens['wallet']));
+
+    if ($needsLinks || $needsQr) {
+        // Generic CSS for emails
+        $btnStyleApple = "display:inline-block; margin-right:10px; padding:10px 16px; background-color:#000000; color:#ffffff; text-decoration:none; border-radius:8px; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:14px; font-weight:bold; text-align:center;";
+        $btnStyleGoogle = "display:inline-block; padding:10px 16px; background-color:#3c4043; color:#ffffff; text-decoration:none; border-radius:8px; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:14px; font-weight:bold; text-align:center;";
+
         foreach ($cids as $cid) {
             $cs = CRM_Contact_BAO_Contact_Utils::generateChecksum($cid);
-            
-            // Generate absolute URLs for emails
-            $appleUrl = CRM_Utils_System::url('civicrm/wallet/pass', "cid={$cid}&cs={$cs}&type=apple", true, null, false, true);
-            $googleUrl = CRM_Utils_System::url('civicrm/wallet/pass', "cid={$cid}&cs={$cs}&type=google", true, null, false, true);
-            
-            $html = "<a href='{$appleUrl}' style='display:inline-block; margin-right:10px;'><img src='https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Add_to_Apple_Wallet_logo.svg/320px-Add_to_Apple_Wallet_logo.svg.png' height='40' alt='Ajouter à Apple Wallet'></a>";
-            $html .= "<a href='{$googleUrl}' style='display:inline-block;'><img src='https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Add_to_Google_Wallet_badge.svg/320px-Add_to_Google_Wallet_badge.svg.png' height='40' alt='Ajouter à Google Wallet'></a>";
-            
-            $values[$cid]['contact.wallet_links'] = $html;
+
+            $htmlMembership = '';
+            if (in_array('links_membership', $tokens['wallet'])) {
+                $appleUrl = CRM_Utils_System::url('civicrm/wallet/pass', "cid={$cid}&cs={$cs}&type=apple&context=membership", true, null, false, true);
+                $googleUrl = CRM_Utils_System::url('civicrm/wallet/pass', "cid={$cid}&cs={$cs}&type=google&context=membership", true, null, false, true);
+
+                $htmlMembership .= "<a href='{$appleUrl}' style='{$btnStyleApple}'>" . E::ts('Ajouter à Apple Wallet') . "</a>";
+                $htmlMembership .= "<a href='{$googleUrl}' style='{$btnStyleGoogle}'>" . E::ts('Ajouter à Google Wallet') . "</a>";
+                
+                $values[$cid]['wallet.links_membership'] = $htmlMembership;
+            }
+
+            $htmlParticipant = '';
+            if (in_array('links_participant', $tokens['wallet'])) {
+                $appleUrl = CRM_Utils_System::url('civicrm/wallet/pass', "cid={$cid}&cs={$cs}&type=apple&context=participant", true, null, false, true);
+                $googleUrl = CRM_Utils_System::url('civicrm/wallet/pass', "cid={$cid}&cs={$cs}&type=google&context=participant", true, null, false, true);
+
+                $htmlParticipant .= "<a href='{$appleUrl}' style='{$btnStyleApple}'>" . E::ts('Ajouter à Apple Wallet') . "</a>";
+                $htmlParticipant .= "<a href='{$googleUrl}' style='{$btnStyleGoogle}'>" . E::ts('Ajouter à Google Wallet') . "</a>";
+                
+                $values[$cid]['wallet.links_participant'] = $htmlParticipant;
+            }
+
+            $htmlDonor = '';
+            if (in_array('links_donor', $tokens['wallet'])) {
+                $appleUrl = CRM_Utils_System::url('civicrm/wallet/pass', "cid={$cid}&cs={$cs}&type=apple&context=donor", true, null, false, true);
+                $googleUrl = CRM_Utils_System::url('civicrm/wallet/pass', "cid={$cid}&cs={$cs}&type=google&context=donor", true, null, false, true);
+
+                $htmlDonor .= "<a href='{$appleUrl}' style='{$btnStyleApple}'>" . E::ts('Ajouter à Apple Wallet') . "</a>";
+                $htmlDonor .= "<a href='{$googleUrl}' style='{$btnStyleGoogle}'>" . E::ts('Ajouter à Google Wallet') . "</a>";
+                
+                $values[$cid]['wallet.links_donor'] = $htmlDonor;
+            }
+
+            if (in_array('qr_membership', $tokens['wallet'])) {
+                $color = ltrim(Civi::settings()->get('wallet_color_foreground') ?: '000000', '#');
+                $qrUrl = CRM_Utils_System::url('civicrm/wallet/api/qr', "entity=membership&cid={$cid}&cs={$cs}&color={$color}", true, null, false, true);
+                $values[$cid]['wallet.qr_membership'] = "<img src='{$qrUrl}' width='150' height='150' alt='" . E::ts('QR Code') . "'>";
+            }
+
+            if (in_array('qr_participant', $tokens['wallet'])) {
+                $color = ltrim(Civi::settings()->get('wallet_color_foreground') ?: '000000', '#');
+                // We use {participant.id} directly so the token processor dynamically replaces it per registration!
+                $base = rtrim(CRM_Utils_System::baseCMSURL(), '/');
+                $qrUrl = $base . "/civicrm/wallet/api/qr?entity=participant&id={participant.id}&cs={$cs}&color={$color}";
+                $values[$cid]['wallet.qr_participant'] = "<img src='{$qrUrl}' width='150' height='150' alt='" . E::ts('QR Code') . "'>";
+            }
+
+            if (in_array('qr_donor', $tokens['wallet'])) {
+                $color = ltrim(Civi::settings()->get('wallet_color_foreground') ?: '000000', '#');
+                $qrUrl = CRM_Utils_System::url('civicrm/wallet/api/qr', "entity=donor&cid={$cid}&cs={$cs}&color={$color}", true, null, false, true);
+                $values[$cid]['wallet.qr_donor'] = "<img src='{$qrUrl}' width='150' height='150' alt='" . E::ts('QR Code') . "'>";
+            }
         }
     }
 }

@@ -9,11 +9,13 @@ class CRM_Wallet_Page_Pass extends CRM_Core_Page
         $hash = CRM_Utils_Request::retrieve('cs', 'String'); // Checksum
         $type = CRM_Utils_Request::retrieve('type', 'String', NULL, FALSE, 'apple');
 
+        $context = CRM_Utils_Request::retrieve('context', 'String');
+
         if (!$participantId && !$contactId) {
             CRM_Utils_System::permissionDenied();
         }
 
-        $entityTable = $participantId ? 'civicrm_participant' : 'civicrm_contact';
+        $entityTable = $participantId ? 'civicrm_participant' : ($context === 'donor' ? 'civicrm_donor' : 'civicrm_contact');
         $entityId = $participantId ? $participantId : $contactId;
 
         // Fetch participant to get Contact ID if it's an event ticket

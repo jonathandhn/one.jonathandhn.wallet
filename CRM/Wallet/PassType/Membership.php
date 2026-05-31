@@ -32,7 +32,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
         $teamIdentifier = Civi::settings()->get('wallet_apple_team_id');
         
         $domain = \Civi\Api4\Domain::get(FALSE)->addWhere('id', '=', CRM_Core_Config::domainID())->execute()->first();
-        $orgName = Civi::settings()->get('wallet_org_name') ?: ($domain['name'] ?? 'Organisation');
+        $orgName = Civi::settings()->get('wallet_org_name') ?: ($domain['name'] ?? E::ts('Organisation'));
 
         if (!$certPath || !file_exists($certPath)) {
             throw new Exception("Apple Wallet Certificate not configured.");
@@ -62,13 +62,33 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
             ]);
         }
 
+        $barcodeToken = Civi::settings()->get('wallet_barcode_membership') ?: '{contact.id}';
+        $membershipId = $membership['id'];
+        
+        if (class_exists('\Civi\Token\TokenProcessor')) {
+            $tokenProcessor = new \Civi\Token\TokenProcessor(\Civi::dispatcher(), ['smarty' => false]);
+            $tokenProcessor->addMessage('barcode', $barcodeToken, 'text/plain');
+            $tokenProcessor->addRow(['contactId' => $contactId, 'membershipId' => $membershipId]);
+            $tokenProcessor->evaluate();
+            $barcodeValue = $tokenProcessor->getRow(0)->render('barcode');
+        } else {
+            $barcodeValue = $contactId; // Fallback
+        }
+
+        $entityType = 'Membership';
+        $empty = null;
+        CRM_Utils_Hook::singleton()->invoke(3, $barcodeValue, $entityType, $membershipId, $empty, $empty, $empty, 'civicrm_wallet_barcode_alter');
+        
+        $qrCodeContent = (string) $barcodeValue;
+        $qrCodeAltText = is_numeric($qrCodeContent) ? $qrCodeContent : '';
+
         // Colors
         $status = \Civi\Api4\MembershipStatus::get(FALSE)->addWhere('id', '=', $membership['status_id'])->execute()->first();
         $isActive = in_array($status['name'], ['New', 'Current', 'Grace']);
         
         $bgColor = $isActive ? (Civi::settings()->get('wallet_color_membership_active') ?: 'rgb(83,180,89)') : (Civi::settings()->get('wallet_color_membership_expired') ?: 'rgb(160,160,160)');
 
-        $endDateStr = !empty($membership['end_date']) ? date('d M Y', strtotime($membership['end_date'])) : 'À vie';
+        $endDateStr = !empty($membership['end_date']) ? date('d M Y', strtotime($membership['end_date'])) : E::ts('À vie');
 
         // Base URL for redirection
         $apiBaseUrl = rtrim(CRM_Utils_System::baseCMSURL(), '/') . '/civicrm/wallet/api/redirect';
@@ -77,7 +97,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
 
         // Prepare Pass Data Array using 'storeCard' model
         $passData = [
-            'description' => 'Carte d\'adhérent ' . $orgName,
+            'description' => E::ts('Carte d\'adhérent %1', [1 => $orgName]),
             'formatVersion' => 1,
             'organizationName' => $orgName,
             'passTypeIdentifier' => $passTypeIdentifier,
@@ -92,57 +112,62 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
                 'primaryFields' => [
                     [
                         'key' => 'member-name',
-                        'label' => 'Adhérent',
+                        'label' => E::ts('Adhérent'),
                         'value' => $contact['display_name'],
                     ],
                 ],
                 'secondaryFields' => [
                     [
                         'key' => 'membership-type',
-                        'label' => 'Type',
+                        'label' => E::ts('Type'),
                         'value' => $membershipType['name'],
                     ],
                     [
                         'key' => 'membership-status',
-                        'label' => 'Statut',
+                        'label' => E::ts('Statut'),
                         'value' => $status['label'],
-                        'changeMessage' => 'Votre statut d\'adhésion a changé : %@',
+                        'changeMessage' => E::ts('Votre statut d\'adhésion a changé : %@'),
                     ],
                 ],
                 'auxiliaryFields' => [
                     [
                         'key' => 'end-date',
-                        'label' => 'Valide jusqu\'au',
+                        'label' => E::ts("Valide jusqu'au"),
                         'value' => $endDateStr,
-                        'changeMessage' => 'Votre adhésion a été prolongée jusqu\'au %@',
+                        'changeMessage' => E::ts("Votre adhésion a été prolongée jusqu'au %@"),
                     ],
                 ],
                 'backFields' => [
                     [
                         'key' => 'renew-link',
-                        'label' => 'Renouveler mon adhésion',
+                        'label' => E::ts('Renouveler mon adhésion'),
                         'value' => $renewUrl,
-                        'attributedValue' => "<a href='$renewUrl'>Renouveler en un clic</a>",
+                        'attributedValue' => "<a href='$renewUrl'>" . E::ts('Renouveler en un clic') . "</a>",
                     ],
                     [
                         'key' => 'profile-link',
-                        'label' => 'Mettre à jour mes coordonnées',
+                        'label' => E::ts('Mettre à jour mes coordonnées'),
                         'value' => $profileUrl,
-                        'attributedValue' => "<a href='$profileUrl'>Mettre à jour mon profil</a>",
+                        'attributedValue' => "<a href='$profileUrl'>" . E::ts('Mettre à jour mon profil') . "</a>",
                     ]
                 ],
             ],
             'barcode' => [
                 'format' => 'PKBarcodeFormatQR',
-                'message' => (string) $contactId,
+                'message' => $qrCodeContent,
                 'messageEncoding' => 'iso-8859-1',
-                'altText' => (string) $contactId,
+                'altText' => $qrCodeAltText,
             ],
         ];
 
         if (!empty($membership['end_date'])) {
             $passData['expirationDate'] = date('c', strtotime($membership['end_date']));
         }
+
+        $platform = 'apple';
+        $entityType = 'Membership';
+        $empty = null;
+        CRM_Utils_Hook::singleton()->invoke(5, $passData, $entityType, $membershipId, $platform, $empty, $empty, 'civicrm_wallet_pass_alter');
 
         // Add Images
         $extPath = CRM_Extension_System::singleton()->getMapper()->keyToBasePath('one.jonathandhn.wallet');
@@ -198,7 +223,25 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
         $service = new \Google\Service\Walletobjects($client);
 
         $classId = $issuerId . '.Membership';
-        $objectId = $issuerId . '.Contact-' . $contactId;
+        $barcodeToken = Civi::settings()->get('wallet_barcode_membership') ?: '{contact.id}';
+        if (class_exists('\Civi\Token\TokenProcessor')) {
+            $tokenProcessor = new \Civi\Token\TokenProcessor(\Civi::dispatcher(), ['smarty' => false]);
+            $tokenProcessor->addMessage('barcode', $barcodeToken, 'text/plain');
+            $tokenProcessor->addRow(['contactId' => $contactId, 'membershipId' => $membershipId]);
+            $tokenProcessor->evaluate();
+            $barcodeValue = $tokenProcessor->getRow(0)->render('barcode');
+        } else {
+            $barcodeValue = $contactId; // Fallback
+        }
+
+        $entityType = 'Membership';
+        $empty = null;
+        CRM_Utils_Hook::singleton()->invoke(3, $barcodeValue, $entityType, $membershipId, $empty, $empty, $empty, 'civicrm_wallet_barcode_alter');
+        
+        $qrCodeContent = (string) $barcodeValue;
+        $qrCodeAltText = is_numeric($qrCodeContent) ? $qrCodeContent : '';
+
+        $objectId = $issuerId . '.' . 'Contact-' . $contactId;
 
         // Image URLs
         $extUrl = CRM_Extension_System::singleton()->getMapper()->keyToUrl('one.jonathandhn.wallet');
@@ -266,22 +309,22 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
             'accountName' => $contact['display_name'],
             'barcode' => [
                 'type' => 'QR_CODE',
-                'value' => (string) $contactId,
-                'alternateText' => (string) $contactId
+                'value' => $qrCodeContent,
+                'alternateText' => $qrCodeAltText
             ],
             'loyaltyPoints' => [
-                'label' => 'Type',
+                'label' => E::ts('Type'),
                 'balance' => [
                     'string' => $membershipType['name']
                 ]
             ],
             'textModulesData' => [
                 [
-                    'header' => 'Statut',
+                    'header' => E::ts('Statut'),
                     'body' => $status['label']
                 ],
                 [
-                    'header' => 'Valide jusqu\'au',
+                    'header' => E::ts("Valide jusqu'au"),
                     'body' => $endDateStr
                 ]
             ]
@@ -290,26 +333,26 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
         $uris = [];
         $uris[] = [
             'uri' => $renewUrl,
-            'description' => 'Renouveler mon adhésion',
+            'description' => E::ts('Renouveler mon adhésion'),
             'id' => 'renew_link_v2'
         ];
         $uris[] = [
             'uri' => $profileUrl,
-            'description' => 'Mettre à jour mon profil',
+            'description' => E::ts('Mettre à jour mon profil'),
             'id' => 'profile_link_v2'
         ];
 
         if ($websiteUrl) {
             $uris[] = [
                 'uri' => $websiteUrl,
-                'description' => 'Site Internet',
+                'description' => E::ts('Site Internet'),
                 'id' => 'website_link_v2'
             ];
         }
         if ($contactUrl) {
             $uris[] = [
                 'uri' => $contactUrl,
-                'description' => 'Contact',
+                'description' => E::ts('Contact'),
                 'id' => 'contact_link_v2'
             ];
         }
@@ -317,6 +360,11 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
         if (!empty($uris)) {
             $objectMetadata['linksModuleData'] = ['uris' => $uris];
         }
+
+        $platform = 'google';
+        $entityType = 'Membership';
+        $empty = null;
+        CRM_Utils_Hook::singleton()->invoke(5, $objectMetadata, $entityType, $membershipId, $platform, $empty, $empty, 'civicrm_wallet_pass_alter');
 
         $objectObj = new \Google\Service\Walletobjects\LoyaltyObject($objectMetadata);
 

@@ -13,6 +13,12 @@
     <is_ssl>true</is_ssl>
   </item>
   <item>
+    <path>civicrm/wallet/api/qr</path>
+    <page_callback>CRM_Wallet_Page_QR</page_callback>
+    <access_arguments>view event info</access_arguments>
+    <is_public>true</is_public>
+  </item>
+  <item>
     <path>civicrm/admin/wallet</path>
     <page_callback>CRM_Wallet_Form_Config</page_callback>
     <access_arguments>administer CiviCRM</access_arguments>

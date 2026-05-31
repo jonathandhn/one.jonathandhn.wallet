@@ -10,7 +10,7 @@ This extension automatically generates wallet passes including QR codes, event d
 
 - **Apple Wallet**: Generates signed `.pkpass` files used in Apple Wallet.
 - **Google Wallet**: Creates "Event Ticket" objects via Google Wallet API and generates "Save to Android Pay" links.
-- **QR Codes**: Encodes participant ID for check-in scanning.
+- **QR Codes**: Encodes participant/membership ID for check-in scanning. Generates native QR Codes for emails and PDFs locally (no external dependencies).
 - **Automatic Updates**: 
   - Updates Apple Wallet passes via Push Notifications when Event details change.
   - Updates Google Wallet passes automatically in the cloud.
@@ -86,8 +86,87 @@ The extension adds a "Wallet Settings" custom group to Events.
 
 ### Participant Workflow
 
-- Participants receive a download link in their email confirmation (requires inserting the `{wallet_links}` token in Message Templates).
+- Participants receive a download link or QR Code in their email confirmation by inserting the following tokens in Message Templates:
+  - `{wallet.links_membership}` / `{wallet.links_participant}` / `{wallet.links_donor}`: Outputs HTML buttons ("Ajouter à Apple Wallet", etc.)
+  - `{wallet.qr_membership}` / `{wallet.qr_participant}` / `{wallet.qr_donor}`: Outputs a native 150x150 QR code image (`<img>` tag) for printing or scanning.
 - Scanning the QR Code on the pass allows check-in. The recommended app is **[Civi Scan Webapp](https://github.com/jonathandhn/one.jonathandhn.scan)**, or standard QR lookup.
+
+### Donor Cards
+You can generate a pure Donor card for any Contact using the `{wallet.links_donor}` token. 
+This card is independent of memberships. By default, it automatically fetches and displays the last 3 completed Contributions (Donations) on the back of the Apple Pass or as text modules on the Google Pass, along with quick links to update their profile or make a new donation.
+
+## Developer API (Hooks)
+
+You can customize the QR Code content dynamically (for example, to inject a cryptographic signature, JSON Web Token (JWT), or HMAC) without forking the extension.
+
+Use the `civicrm_wallet_barcode_alter` hook in your custom extension:
+
+```php
+/**
+ * Implements hook_civicrm_wallet_barcode_alter().
+ *
+ * @param string $barcodeValue The string encoded in the QR Code
+ * @param string $entityType   'Participant' or 'Membership'
+ * @param int    $entityId     The ID of the Participant or Membership
+ */
+function myextension_civicrm_wallet_barcode_alter(&$barcodeValue, $entityType, $entityId) {
+    if ($entityType === 'Participant') {
+        // Example: Inject a signed JSON Web Token instead of the raw ID
+        $payload = [
+            'pid' => $entityId,
+            'exp' => time() + 86400
+        ];
+        $secretKey = 'your-very-secret-key';
+        
+        // CiviCRM bundles \Firebase\JWT\JWT natively, so you can use it directly!
+        $barcodeValue = \Firebase\JWT\JWT::encode($payload, $secretKey, 'HS256');
+        
+        // Example: Simple HMAC signature
+        $signature = hash_hmac('sha256', (string)$entityId, $secretKey);
+        $barcodeValue = json_encode(['id' => $entityId, 'sig' => $signature]);
+    }
+}
+```
+
+This hook alters the QR Code on:
+1. Apple Wallet Passes
+2. Google Wallet Passes
+3. Local QR Codes generated via the `{wallet.qr_*}` tokens.
+
+### Modifying the Pass Structure (e.g., Donor Cards)
+
+If you want to inject custom data directly onto the Apple Pass (like the back of the card) or the Google Pass (like text modules), use the `civicrm_wallet_pass_alter` hook. This is perfect for creating Donor Cards that list recent contributions.
+
+```php
+/**
+ * Implements hook_civicrm_wallet_pass_alter().
+ *
+ * @param array  $passData   The data array being passed to Apple or Google Wallet API
+ * @param string $entityType 'Participant' or 'Membership'
+ * @param int    $entityId   The ID of the Participant or Membership
+ * @param string $platform   'apple' or 'google'
+ */
+function myextension_civicrm_wallet_pass_alter(&$passData, $entityType, $entityId, $platform) {
+    if ($entityType === 'Membership') {
+        // Example: Add recent donations to the back of the Apple Wallet card
+        // Note: You must query your actual Contributions via CiviCRM APIv4 here!
+        $recentDonations = "12/05/2026 : 50€\n15/12/2025 : 100€";
+
+        if ($platform === 'apple') {
+            $passData['storeCard']['backFields'][] = [
+                'key' => 'recent-donations',
+                'label' => 'Derniers dons',
+                'value' => $recentDonations
+            ];
+        } elseif ($platform === 'google') {
+            $passData['textModulesData'][] = [
+                'header' => 'Derniers dons',
+                'body' => $recentDonations
+            ];
+        }
+    }
+}
+```
 
 ## Visibility
 

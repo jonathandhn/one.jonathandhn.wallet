@@ -15,6 +15,8 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO
             return CRM_Wallet_PassType_Participant::createApplePass($entityId);
         } elseif ($entityTable === 'civicrm_contact' || $entityTable === 'civicrm_membership') {
             return CRM_Wallet_PassType_Membership::createApplePass($entityId);
+        } elseif ($entityTable === 'civicrm_donor') {
+            return CRM_Wallet_PassType_Donor::createApplePass($entityId);
         }
         throw new Exception("Unsupported entity table for Apple Wallet: $entityTable");
     }
@@ -25,6 +27,8 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO
             return CRM_Wallet_PassType_Participant::createGooglePass($entityId);
         } elseif ($entityTable === 'civicrm_contact' || $entityTable === 'civicrm_membership') {
             return CRM_Wallet_PassType_Membership::createGooglePass($entityId);
+        } elseif ($entityTable === 'civicrm_donor') {
+            return CRM_Wallet_PassType_Donor::createGooglePass($entityId);
         }
         throw new Exception("Unsupported entity table for Google Wallet: $entityTable");
     }

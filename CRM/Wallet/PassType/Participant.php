@@ -21,7 +21,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
         $passTypeIdentifier = Civi::settings()->get('wallet_apple_pass_type_id');
         $teamIdentifier = Civi::settings()->get('wallet_apple_team_id');
         $domain = \Civi\Api4\Domain::get(FALSE)->addWhere('id', '=', CRM_Core_Config::domainID())->execute()->first();
-        $defaultOrgName = $domain['name'] ?? 'Organisation';
+        $defaultOrgName = $domain['name'] ?? E::ts('Organisation');
         $defaultUrl = CRM_Utils_System::baseCMSURL();
 
         $orgName = Civi::settings()->get('wallet_org_name') ?: $defaultOrgName;
@@ -94,7 +94,24 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             }
         }
 
-        $qrCodeContent = (string) $participant['id'];
+        $barcodeToken = Civi::settings()->get('wallet_barcode_participant') ?: '{participant.id}';
+        
+        if (class_exists('\Civi\Token\TokenProcessor')) {
+            $tokenProcessor = new \Civi\Token\TokenProcessor(\Civi::dispatcher(), ['smarty' => false]);
+            $tokenProcessor->addMessage('barcode', $barcodeToken, 'text/plain');
+            $tokenProcessor->addRow(['contactId' => $participant['contact_id'], 'participantId' => $participantId]);
+            $tokenProcessor->evaluate();
+            $barcodeValue = $tokenProcessor->getRow(0)->render('barcode');
+        } else {
+            $barcodeValue = $participantId; // Fallback
+        }
+
+        $entityType = 'Participant';
+        $empty = null;
+        CRM_Utils_Hook::singleton()->invoke(3, $barcodeValue, $entityType, $participantId, $empty, $empty, $empty, 'civicrm_wallet_barcode_alter');
+        
+        $qrCodeContent = (string) $barcodeValue;
+        $qrCodeAltText = is_numeric($qrCodeContent) ? $qrCodeContent : '';
 
         if ($websiteUrl && !preg_match("~^(?:f|ht)tps?://~i", $websiteUrl)) $websiteUrl = "https://" . $websiteUrl;
         if ($contactUrl && !preg_match("~^(?:f|ht)tps?://~i", $contactUrl)) $contactUrl = "https://" . $contactUrl;
@@ -104,30 +121,30 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
         if ($venueName || $venueAddress) {
             $backFields[] = [
                 'key' => 'venue-info',
-                'label' => $venueName ?: 'LIEU',
+                'label' => $venueName ?: E::ts('LIEU'),
                 'value' => $venueAddress ?: $venueName,
-                'changeMessage' => 'Le lieu a changé : %@',
+                'changeMessage' => E::ts('Le lieu a changé : %@'),
             ];
         }
 
         if (!empty($event['description'])) {
             $backFields[] = [
                 'key' => 'description',
-                'label' => 'Description',
+                'label' => E::ts('Description'),
                 'value' => strip_tags($event['description']),
             ];
         }
 
         $backFields[] = [
             'key' => 'organizer-name',
-            'label' => 'Organisateur',
+            'label' => E::ts('Organisateur'),
             'value' => $orgName,
         ];
 
         if ($websiteUrl) {
             $backFields[] = [
                 'key' => 'website',
-                'label' => 'Informations',
+                'label' => E::ts('Informations'),
                 'value' => $websiteUrl,
                 'attributedValue' => "<a href='$websiteUrl'>$websiteUrl</a>",
             ];
@@ -136,7 +153,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
         if ($contactUrl) {
             $backFields[] = [
                 'key' => 'contact',
-                'label' => 'Contact',
+                'label' => E::ts('Contact'),
                 'value' => $contactUrl,
                 'attributedValue' => "<a href='$contactUrl'>$contactUrl</a>",
             ];
@@ -145,7 +162,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
         $auxiliaryFields = [
             [
                 'key' => 'participant-name',
-                'label' => 'TITULAIRE',
+                'label' => E::ts('TITULAIRE'),
                 'value' => $contact['display_name'],
             ],
         ];
@@ -154,9 +171,9 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             $feeLevel = is_array($participant['fee_level']) ? implode(', ', $participant['fee_level']) : $participant['fee_level'];
             $auxiliaryFields[] = [
                 'key' => 'fee-level',
-                'label' => 'BILLET',
+                'label' => E::ts('BILLET'),
                 'value' => strip_tags(str_replace('&nbsp;', ' ', $feeLevel)),
-                'changeMessage' => 'Votre billet a été mis à jour : %@',
+                'changeMessage' => E::ts('Votre billet a été mis à jour : %@'),
             ];
         }
 
@@ -178,20 +195,20 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
                         'key' => 'event-name',
                         'label' => $venueName,
                         'value' => $event['title'],
-                        'changeMessage' => 'L\'événement a changé : %@',
+                        'changeMessage' => E::ts("L'événement a changé : %@"),
                     ],
                 ],
                 'secondaryFields' => [
                     [
                         'key' => 'start-date',
-                        'label' => 'DATE',
+                        'label' => E::ts('DATE'),
                         'value' => date('d M Y', strtotime($event['start_date'])),
                         'textAlignment' => 'PKTextAlignmentLeft',
-                        'changeMessage' => 'La date a changé : %@',
+                        'changeMessage' => E::ts('La date a changé : %@'),
                     ],
                     [
                         'key' => 'start-time',
-                        'label' => 'HEURE',
+                        'label' => E::ts('HEURE'),
                         'value' => date('H:i', strtotime($event['start_date'])),
                         'textAlignment' => 'PKTextAlignmentRight',
                     ],
@@ -203,7 +220,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
                 'format' => 'PKBarcodeFormatQR',
                 'message' => $qrCodeContent,
                 'messageEncoding' => 'iso-8859-1',
-                'altText' => (string) $participant['id'],
+                'altText' => $qrCodeAltText,
             ],
             'locations' => $locations,
             'relevantDate' => date('c', strtotime($event['start_date'])),
@@ -254,6 +271,11 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             } catch (Exception $e) {}
         }
 
+        $platform = 'apple';
+        $entityType = 'Participant';
+        $empty = null;
+        CRM_Utils_Hook::singleton()->invoke(5, $passData, $entityType, $participantId, $platform, $empty, $empty, 'civicrm_wallet_pass_alter');
+
         $pass->setData($passData);
 
         return $pass->create();
@@ -266,11 +288,27 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
         if (!$participant) throw new Exception("Participant not found");
 
         $event = \Civi\Api4\Event::get(FALSE)->addWhere('id', '=', $participant['event_id'])->execute()->first();
-        $qrCodeContent = (string) $participantId;
+        $barcodeToken = Civi::settings()->get('wallet_barcode_participant') ?: '{participant.id}';
+        if (class_exists('\Civi\Token\TokenProcessor')) {
+            $tokenProcessor = new \Civi\Token\TokenProcessor(\Civi::dispatcher(), ['smarty' => false]);
+            $tokenProcessor->addMessage('barcode', $barcodeToken, 'text/plain');
+            $tokenProcessor->addRow(['contactId' => $participant['contact_id'], 'participantId' => $participantId]);
+            $tokenProcessor->evaluate();
+            $barcodeValue = $tokenProcessor->getRow(0)->render('barcode');
+        } else {
+            $barcodeValue = $participantId; // Fallback
+        }
+
+        $entityType = 'Participant';
+        $empty = null;
+        CRM_Utils_Hook::singleton()->invoke(3, $barcodeValue, $entityType, $participantId, $empty, $empty, $empty, 'civicrm_wallet_barcode_alter');
+        
+        $qrCodeContent = (string) $barcodeValue;
+        $qrCodeAltText = is_numeric($qrCodeContent) ? $qrCodeContent : '';
 
         $issuerId = Civi::settings()->get('wallet_google_issuer_id');
         $credentialsFile = Civi::settings()->get('wallet_google_credentials');
-        $orgName = Civi::settings()->get('wallet_org_name') ?: 'Organisation';
+        $orgName = Civi::settings()->get('wallet_org_name') ?: E::ts('Organisation');
         $websiteUrl = Civi::settings()->get('wallet_website_url');
         $contactUrl = Civi::settings()->get('wallet_contact_url');
 
@@ -488,7 +526,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
         if (!empty($participant['fee_level'])) {
             $feeLevel = is_array($participant['fee_level']) ? implode(', ', $participant['fee_level']) : $participant['fee_level'];
             $textModulesData[] = [
-                'header' => 'Billet',
+                'header' => E::ts('Billet'),
                 'body' => strip_tags(str_replace('&nbsp;', ' ', $feeLevel))
             ];
         }
@@ -524,15 +562,19 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
         }
 
         $objectMetadata['barcode'] = [
-                'type' => 'QR_CODE',
-                'value' => $qrCodeContent,
-                'alternateText' => (string) $participant['id']
-            ]
+            'type' => 'QR_CODE',
+            'value' => $qrCodeContent,
+            'alternateText' => $qrCodeAltText
         ];
 
         if ($gpsLocation) {
             $objectMetadata['locations'] = [$gpsLocation];
         }
+
+        $platform = 'google';
+        $entityType = 'Participant';
+        $empty = null;
+        CRM_Utils_Hook::singleton()->invoke(5, $objectMetadata, $entityType, $participantId, $platform, $empty, $empty, 'civicrm_wallet_pass_alter');
 
         $objectObj = new \Google\Service\Walletobjects\EventTicketObject($objectMetadata);
 
