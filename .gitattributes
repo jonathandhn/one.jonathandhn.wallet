@@ -1,0 +1,9 @@
+/.github export-ignore
+/vendor export-ignore
+/.gitignore export-ignore
+/ADMIN_PAGE_BLUEPRINT.md export-ignore
+/BUILD_NOTES.md export-ignore
+/composer.phar export-ignore
+/.DS_Store export-ignore
+/.idea export-ignore
+/.vscode export-ignore

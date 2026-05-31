@@ -1,0 +1,105 @@
+name: Release Build
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2
+
+      - name: Validate composer metadata
+        run: composer validate --no-check-publish
+
+      - name: Prepare source package
+        run: |
+          mkdir -p dist
+          rsync -a \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude 'vendor' \
+            --exclude '.idea' \
+            --exclude '.vscode' \
+            --exclude '.DS_Store' \
+            --exclude '*.p12' \
+            --exclude '*.pem' \
+            --exclude '*.key' \
+            --exclude '*.p8' \
+            --exclude '*credential*.json' \
+            --exclude '*secret*.json' \
+            --exclude 'google-services.json' \
+            --exclude 'client_secret_*.json' \
+            --exclude 'service-account.json' \
+            --exclude 'auth.json' \
+            ./ dist/civi-wallet/
+          cd dist
+          zip -r civi-wallet-source.zip civi-wallet
+
+      - name: Install production dependencies
+        run: composer install --no-dev --prefer-dist --optimize-autoloader
+
+      - name: Collect third-party licenses for bundled package
+        run: |
+          mkdir -p dist-bundled/licenses
+          cp vendor/pkpass/pkpass/LICENSE dist-bundled/licenses/pkpass-pkpass.LICENSE
+          cp vendor/google/apiclient/LICENSE dist-bundled/licenses/google-apiclient.LICENSE
+          if [ -f vendor/google/apiclient/NOTICE ]; then
+            cp vendor/google/apiclient/NOTICE dist-bundled/licenses/google-apiclient.NOTICE
+          fi
+
+      - name: Prepare bundled package
+        run: |
+          mkdir -p dist-bundled
+          rsync -a \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude '.idea' \
+            --exclude '.vscode' \
+            --exclude '.DS_Store' \
+            --exclude '*.p12' \
+            --exclude '*.pem' \
+            --exclude '*.key' \
+            --exclude '*.p8' \
+            --exclude '*credential*.json' \
+            --exclude '*secret*.json' \
+            --exclude 'google-services.json' \
+            --exclude 'client_secret_*.json' \
+            --exclude 'service-account.json' \
+            --exclude 'auth.json' \
+            ./ dist-bundled/civi-wallet/
+          cp -a dist-bundled/licenses dist-bundled/civi-wallet/licenses
+          cd dist-bundled
+          zip -r civi-wallet-bundled.zip civi-wallet
+
+      - name: Upload source artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: civi-wallet-source
+          path: dist/civi-wallet-source.zip
+
+      - name: Upload bundled artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: civi-wallet-bundled
+          path: dist-bundled/civi-wallet-bundled.zip
+
+      - name: Attach artifacts to GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/civi-wallet-source.zip
+            dist-bundled/civi-wallet-bundled.zip
