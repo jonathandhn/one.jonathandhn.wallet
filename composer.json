@@ -1,7 +1,7 @@
 {
     "name": "one.jonathandhn.wallet/civi-wallet",
     "description": "CiviCRM extension for Apple and Google Wallet",
-    "license": "AGPL-3.0",
+    "license": "AGPL-3.0-or-later",
     "authors": [
         {
             "name": "Jonathan Dahan",
