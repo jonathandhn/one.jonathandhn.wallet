@@ -148,7 +148,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
         $extPath = CRM_Extension_System::singleton()->getMapper()->keyToBasePath('one.jonathandhn.wallet');
         $imagesPath = $extPath . '/resources/images/';
         
-        $pass->setPass($passData);
+        $pass->setData($passData);
         if (file_exists($imagesPath . 'icon.png')) $pass->addFile($imagesPath . 'icon.png');
         if (file_exists($imagesPath . 'icon@2x.png')) $pass->addFile($imagesPath . 'icon@2x.png');
         if (file_exists($imagesPath . 'icon@3x.png')) $pass->addFile($imagesPath . 'icon@3x.png');

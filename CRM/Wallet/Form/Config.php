@@ -74,9 +74,9 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting
         $this->add('text', 'wallet_contact_url', E::ts('Contact URL'), ['size' => 50, 'placeholder' => 'https://www.example.org/contact']);
 
         // --- Graphics Settings ---
-        $this->add('color', 'wallet_color_background', E::ts('Background Color'), ['default' => '#ea148c']);
-        $this->add('color', 'wallet_color_foreground', E::ts('Foreground Color'), ['default' => '#ffffff']);
-        $this->add('color', 'wallet_color_label', E::ts('Label Color'), ['default' => '#ffffff']);
+        $this->add('text', 'wallet_color_background', E::ts('Background Color'), ['type' => 'color', 'placeholder' => '#ea148c']);
+        $this->add('text', 'wallet_color_foreground', E::ts('Foreground Color'), ['type' => 'color', 'placeholder' => '#ffffff']);
+        $this->add('text', 'wallet_color_label', E::ts('Label Color'), ['type' => 'color', 'placeholder' => '#ffffff']);
 
         $this->add('file', 'wallet_image_icon_upload', E::ts('Icon (icon.png)'));
         $this->add('file', 'wallet_image_logo_upload', E::ts('Logo (logo.png)'));
@@ -84,8 +84,8 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting
         // --- Membership Settings ---
         $this->add('text', 'wallet_membership_renew_url', E::ts('Membership Renew URL'), ['size' => 50, 'placeholder' => 'civicrm/contribute/transact?reset=1&id=1']);
         $this->add('text', 'wallet_membership_profile_url', E::ts('Profile Update URL'), ['size' => 50, 'placeholder' => 'civicrm/profile/edit?reset=1&gid=1']);
-        $this->add('color', 'wallet_color_membership_active', E::ts('Membership Active Color'), ['default' => '#53b459']);
-        $this->add('color', 'wallet_color_membership_expired', E::ts('Membership Expired Color'), ['default' => '#a0a0a0']);
+        $this->add('text', 'wallet_color_membership_active', E::ts('Membership Active Color'), ['type' => 'color', 'placeholder' => '#53b459']);
+        $this->add('text', 'wallet_color_membership_expired', E::ts('Membership Expired Color'), ['type' => 'color', 'placeholder' => '#a0a0a0']);
 
         parent::buildQuickForm();
     }

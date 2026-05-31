@@ -54,45 +54,110 @@ class CRM_Wallet_Upgrader extends CRM_Extension_Upgrader_Base
         return TRUE;
     }
 
-        public function upgrade_1003()
+            public function upgrade_1005()
     {
         $this->ctx->log->info('Migrating wallet passes from participant_id to entity_id/entity_table');
         
+        // Helper to safely execute queries
+        $safeQuery = function($sql) {
+            try {
+                CRM_Core_DAO::executeQuery($sql);
+            } catch (Exception $e) {
+                $this->ctx->log->warning("Upgrade 1004 SQL Failed: $sql | Error: " . $e->getMessage());
+            }
+        };
+
         // Check if entity_table exists
         $dao = CRM_Core_DAO::executeQuery("SHOW COLUMNS FROM civicrm_wallet_pass LIKE 'entity_table'");
         if (!$dao->fetch()) {
-            // Drop foreign key if exists
-            try { CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass DROP FOREIGN KEY FK_civicrm_wallet_pass_participant_id"); } catch (Exception $e) {}
-            try { CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass DROP FOREIGN KEY civicrm_wallet_pass_ibfk_1"); } catch (Exception $e) {}
+            
+            // Try dropping common foreign key names for participant_id
+            $safeQuery("ALTER TABLE civicrm_wallet_pass DROP FOREIGN KEY FK_civicrm_wallet_pass_participant_id");
+            $safeQuery("ALTER TABLE civicrm_wallet_pass DROP FOREIGN KEY civicrm_wallet_pass_ibfk_1");
+            $safeQuery("ALTER TABLE civicrm_wallet_pass DROP FOREIGN KEY FK_participant_id");
 
             // Add new columns
-            CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass ADD COLUMN entity_table VARCHAR(64) NULL AFTER id");
-            CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass ADD COLUMN entity_id INT UNSIGNED NULL AFTER entity_table");
+            $safeQuery("ALTER TABLE civicrm_wallet_pass ADD COLUMN entity_table VARCHAR(64) NULL AFTER id");
+            $safeQuery("ALTER TABLE civicrm_wallet_pass ADD COLUMN entity_id INT UNSIGNED NULL AFTER entity_table");
 
             // Check if participant_id exists before migrating data from it
             $hasParticipantId = CRM_Core_DAO::executeQuery("SHOW COLUMNS FROM civicrm_wallet_pass LIKE 'participant_id'")->fetch();
             
             if ($hasParticipantId) {
                 // Migrate data
-                CRM_Core_DAO::executeQuery("UPDATE civicrm_wallet_pass SET entity_table = 'civicrm_participant', entity_id = participant_id WHERE participant_id IS NOT NULL");
+                $safeQuery("UPDATE civicrm_wallet_pass SET entity_table = 'civicrm_participant', entity_id = participant_id WHERE participant_id IS NOT NULL");
             }
 
-            // Make columns NOT NULL (only for existing records where we migrated data, otherwise set a default for the rest just to pass constraint, or delete invalid ones)
-            // To be safe against empty rows, delete rows with no entity_id before making it NOT NULL
-            CRM_Core_DAO::executeQuery("DELETE FROM civicrm_wallet_pass WHERE entity_id IS NULL");
+            // Cleanup invalid rows
+            $safeQuery("DELETE FROM civicrm_wallet_pass WHERE entity_id IS NULL OR entity_table IS NULL");
             
-            CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass MODIFY COLUMN entity_table VARCHAR(64) NOT NULL");
-            CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass MODIFY COLUMN entity_id INT UNSIGNED NOT NULL");
+            // Make columns NOT NULL
+            $safeQuery("ALTER TABLE civicrm_wallet_pass MODIFY COLUMN entity_table VARCHAR(64) NOT NULL");
+            $safeQuery("ALTER TABLE civicrm_wallet_pass MODIFY COLUMN entity_id INT UNSIGNED NOT NULL");
 
             // Drop old column
             if ($hasParticipantId) {
-                CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass DROP COLUMN participant_id");
+                $safeQuery("ALTER TABLE civicrm_wallet_pass DROP COLUMN participant_id");
             }
 
             // Update index
-            try { CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass DROP INDEX index_participant_type"); } catch (Exception $e) {}
-            CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_wallet_pass ADD UNIQUE INDEX index_entity_type (entity_table, entity_id, type)");
+            $safeQuery("ALTER TABLE civicrm_wallet_pass DROP INDEX index_participant_type");
+            $safeQuery("ALTER TABLE civicrm_wallet_pass ADD UNIQUE INDEX index_entity_type (entity_table, entity_id, type)");
+        } else {
+            // Even if entity_table exists, participant_id might still exist if it crashed last time
+            $hasParticipantId = CRM_Core_DAO::executeQuery("SHOW COLUMNS FROM civicrm_wallet_pass LIKE 'participant_id'")->fetch();
+            if ($hasParticipantId) {
+                $safeQuery("ALTER TABLE civicrm_wallet_pass DROP FOREIGN KEY FK_civicrm_wallet_pass_participant_id");
+                $safeQuery("ALTER TABLE civicrm_wallet_pass DROP FOREIGN KEY civicrm_wallet_pass_ibfk_1");
+                $safeQuery("ALTER TABLE civicrm_wallet_pass DROP COLUMN participant_id");
+            }
+            
+            // Try creating the index just in case it failed last time
+            $safeQuery("ALTER TABLE civicrm_wallet_pass DROP INDEX index_participant_type");
+            $safeQuery("ALTER TABLE civicrm_wallet_pass ADD UNIQUE INDEX index_entity_type (entity_table, entity_id, type)");
         }
+
+        return TRUE;
+    }
+        public function upgrade_1006()
+    {
+        $this->ctx->log->info('Dropping participant_id foreign keys and column dynamically');
+        
+        // Helper to safely execute queries
+        $safeQuery = function($sql) {
+            try {
+                CRM_Core_DAO::executeQuery($sql);
+            } catch (Exception $e) {
+                $this->ctx->log->warning("Upgrade 1006 SQL Failed: $sql | Error: " . $e->getMessage());
+            }
+        };
+
+        // Find the foreign key name for participant_id dynamically
+        $dao = CRM_Core_DAO::executeQuery("
+            SELECT CONSTRAINT_NAME 
+            FROM information_schema.KEY_COLUMN_USAGE 
+            WHERE TABLE_SCHEMA = DATABASE() 
+              AND TABLE_NAME = 'civicrm_wallet_pass' 
+              AND COLUMN_NAME = 'participant_id' 
+              AND REFERENCED_TABLE_NAME IS NOT NULL
+        ");
+
+        while ($dao->fetch()) {
+            $fkName = $dao->CONSTRAINT_NAME;
+            $this->ctx->log->info("Found foreign key: $fkName. Dropping it...");
+            $safeQuery("ALTER TABLE civicrm_wallet_pass DROP FOREIGN KEY `$fkName`");
+        }
+
+        // Now drop the column
+        $hasParticipantId = CRM_Core_DAO::executeQuery("SHOW COLUMNS FROM civicrm_wallet_pass LIKE 'participant_id'")->fetch();
+        if ($hasParticipantId) {
+            $safeQuery("ALTER TABLE civicrm_wallet_pass MODIFY participant_id INT UNSIGNED NULL"); // Make it nullable just in case drop fails again
+            $safeQuery("ALTER TABLE civicrm_wallet_pass DROP COLUMN participant_id");
+        }
+
+        // Just in case, ensure the new index exists
+        $safeQuery("ALTER TABLE civicrm_wallet_pass DROP INDEX index_participant_type");
+        $safeQuery("ALTER TABLE civicrm_wallet_pass ADD UNIQUE INDEX index_entity_type (entity_table, entity_id, type)");
 
         return TRUE;
     }
