@@ -9,21 +9,21 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
     public static function createApplePass($entityId)
     {
         $contactId = $entityId;
-        $contact = civicrm_api3('Contact', 'getsingle', ['id' => $contactId]);
+        $contact = \Civi\Api4\Contact::get(FALSE)->addWhere('id', '=', $contactId)->execute()->first();
 
         // Fetch most recent membership
-        $memberships = civicrm_api3('Membership', 'get', [
-            'contact_id' => $contactId,
-            'options' => ['sort' => 'end_date DESC', 'limit' => 1]
-        ]);
+        $membership = \Civi\Api4\Membership::get(FALSE)
+            ->addWhere('contact_id', '=', $contactId)
+            ->addOrderBy('end_date', 'DESC')
+            ->setLimit(1)
+            ->execute()->first();
         
-        if (empty($memberships['values'])) {
+        if (!$membership) {
             throw new Exception("No membership found for Contact $contactId");
         }
-        $membership = reset($memberships['values']);
 
         // Fetch Membership Type
-        $membershipType = civicrm_api3('MembershipType', 'getsingle', ['id' => $membership['membership_type_id']]);
+        $membershipType = \Civi\Api4\MembershipType::get(FALSE)->addWhere('id', '=', $membership['membership_type_id'])->execute()->first();
 
         // Initialize Wallet settings
         $certPath = Civi::settings()->get('wallet_apple_cert');
@@ -31,7 +31,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
         $passTypeIdentifier = Civi::settings()->get('wallet_apple_pass_type_id'); // Reusing the same cert
         $teamIdentifier = Civi::settings()->get('wallet_apple_team_id');
         
-        $domain = civicrm_api3('Domain', 'getsingle', ['id' => CRM_Core_Config::domainID()]);
+        $domain = \Civi\Api4\Domain::get(FALSE)->addWhere('id', '=', CRM_Core_Config::domainID())->execute()->first();
         $orgName = Civi::settings()->get('wallet_org_name') ?: ($domain['name'] ?? 'Organisation');
 
         if (!$certPath || !file_exists($certPath)) {
@@ -63,8 +63,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
         }
 
         // Colors
-        // Example: Green if active, Red/Gray if expired
-        $status = civicrm_api3('MembershipStatus', 'getsingle', ['id' => $membership['status_id']]);
+        $status = \Civi\Api4\MembershipStatus::get(FALSE)->addWhere('id', '=', $membership['status_id'])->execute()->first();
         $isActive = in_array($status['name'], ['New', 'Current', 'Grace']);
         
         $bgColor = $isActive ? (Civi::settings()->get('wallet_color_membership_active') ?: 'rgb(83,180,89)') : (Civi::settings()->get('wallet_color_membership_expired') ?: 'rgb(160,160,160)');
@@ -158,29 +157,30 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
         $pass->create(true);
     }
 
-        public static function createGooglePass($entityId)
+    public static function createGooglePass($entityId)
     {
         $contactId = $entityId;
-        $contact = civicrm_api3('Contact', 'getsingle', ['id' => $contactId]);
+        $contact = \Civi\Api4\Contact::get(FALSE)->addWhere('id', '=', $contactId)->execute()->first();
 
         // Fetch most recent membership
-        $memberships = civicrm_api3('Membership', 'get', [
-            'contact_id' => $contactId,
-            'options' => ['sort' => 'end_date DESC', 'limit' => 1]
-        ]);
+        $membership = \Civi\Api4\Membership::get(FALSE)
+            ->addWhere('contact_id', '=', $contactId)
+            ->addOrderBy('end_date', 'DESC')
+            ->setLimit(1)
+            ->execute()->first();
         
-        if (empty($memberships['values'])) {
+        if (!$membership) {
             throw new Exception("No membership found for Contact $contactId");
         }
-        $membership = reset($memberships['values']);
-        $membershipType = civicrm_api3('MembershipType', 'getsingle', ['id' => $membership['membership_type_id']]);
-        $status = civicrm_api3('MembershipStatus', 'getsingle', ['id' => $membership['status_id']]);
+
+        $membershipType = \Civi\Api4\MembershipType::get(FALSE)->addWhere('id', '=', $membership['membership_type_id'])->execute()->first();
+        $status = \Civi\Api4\MembershipStatus::get(FALSE)->addWhere('id', '=', $membership['status_id'])->execute()->first();
 
         // Configuration
         $issuerId = Civi::settings()->get('wallet_google_issuer_id');
         $credentialsFile = Civi::settings()->get('wallet_google_credentials');
         
-        $domain = civicrm_api3('Domain', 'getsingle', ['id' => CRM_Core_Config::domainID()]);
+        $domain = \Civi\Api4\Domain::get(FALSE)->addWhere('id', '=', CRM_Core_Config::domainID())->execute()->first();
         $orgName = Civi::settings()->get('wallet_org_name') ?: ($domain['name'] ?? 'Organisation');
         $websiteUrl = Civi::settings()->get('wallet_website_url') ?: CRM_Utils_System::baseCMSURL();
         $contactUrl = Civi::settings()->get('wallet_contact_url') ?: CRM_Utils_System::baseCMSURL();

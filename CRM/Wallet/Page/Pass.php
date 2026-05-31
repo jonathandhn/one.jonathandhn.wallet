@@ -19,7 +19,12 @@ class CRM_Wallet_Page_Pass extends CRM_Core_Page
         // Fetch participant to get Contact ID if it's an event ticket
         if ($participantId) {
             try {
-                $participant = civicrm_api3('Participant', 'getsingle', ['id' => $participantId]);
+                $participant = \Civi\Api4\Participant::get(FALSE)
+                    ->addWhere('id', '=', $participantId)
+                    ->execute()->first();
+                if (!$participant) {
+                    throw new Exception("Participant not found");
+                }
                 $contactId = $participant['contact_id'];
             } catch (Exception $e) {
                 CRM_Utils_System::permissionDenied();

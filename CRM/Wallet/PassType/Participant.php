@@ -6,25 +6,21 @@ use CRM_Wallet_ExtensionUtil as E;
 class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
 {
 
-    /**
-     * Create an Apple Wallet Pass for a participant.
-     *
-     * @param int $participantId
-     * @return void
-     */
     public static function createApplePass($entityId)
     {
         $participantId = $entityId;
-        $participant = civicrm_api3('Participant', 'getsingle', ['id' => $participantId, 'check_permissions' => FALSE]);
-        $event = civicrm_api3('Event', 'getsingle', ['id' => $participant['event_id'], 'check_permissions' => FALSE]);
-        $contact = civicrm_api3('Contact', 'getsingle', ['id' => $participant['contact_id'], 'check_permissions' => FALSE]);
+        $participant = \Civi\Api4\Participant::get(FALSE)->addWhere('id', '=', $participantId)->execute()->first();
+        if (!$participant) throw new Exception("Participant not found");
+
+        $event = \Civi\Api4\Event::get(FALSE)->addWhere('id', '=', $participant['event_id'])->execute()->first();
+        $contact = \Civi\Api4\Contact::get(FALSE)->addWhere('id', '=', $participant['contact_id'])->execute()->first();
 
         // Initialize Wallet settings
         $certPath = Civi::settings()->get('wallet_apple_cert');
         $certPass = Civi::settings()->get('wallet_apple_cert_password');
         $passTypeIdentifier = Civi::settings()->get('wallet_apple_pass_type_id');
         $teamIdentifier = Civi::settings()->get('wallet_apple_team_id');
-        $domain = civicrm_api3('Domain', 'getsingle', ['id' => CRM_Core_Config::domainID()]);
+        $domain = \Civi\Api4\Domain::get(FALSE)->addWhere('id', '=', CRM_Core_Config::domainID())->execute()->first();
         $defaultOrgName = $domain['name'] ?? 'Organisation';
         $defaultUrl = CRM_Utils_System::baseCMSURL();
 
@@ -36,7 +32,6 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             throw new Exception("Apple Wallet Certificate not configured or not found.");
         }
 
-        // Validate Certificate and Password
         $pkcs12 = file_get_contents($certPath);
         $certs = [];
         if (!openssl_pkcs12_read($pkcs12, $certs, $certPass)) {
@@ -47,7 +42,6 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
 
         $serialNumber = $participantId . '-' . time();
 
-        // Check for existing pass
         $dao = CRM_Core_DAO::executeQuery("SELECT * FROM civicrm_wallet_pass WHERE entity_table = 'civicrm_participant' AND entity_id = %1 AND type = 'apple'", [1 => [$participantId, 'Integer']]);
         if ($dao->fetch()) {
             $serialNumber = $dao->serial_number;
@@ -61,59 +55,49 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             ]);
         }
 
-        // Fetch Venue & Location
         $venueName = '';
         $venueAddress = '';
         $locations = [];
         if (!empty($event['loc_block_id'])) {
-            $locBlock = civicrm_api3('LocBlock', 'getsingle', ['id' => $event['loc_block_id']]);
-            if (!empty($locBlock['address_id'])) {
-                $address = civicrm_api3('Address', 'getsingle', ['id' => $locBlock['address_id']]);
+            $locBlock = \Civi\Api4\LocBlock::get(FALSE)->addWhere('id', '=', $event['loc_block_id'])->execute()->first();
+            if ($locBlock && !empty($locBlock['address_id'])) {
+                $address = \Civi\Api4\Address::get(FALSE)->addWhere('id', '=', $locBlock['address_id'])->execute()->first();
 
-                // Determine Venue Name
-                if (!empty($address['supplemental_address_1'])) {
-                    $venueName = $address['supplemental_address_1'];
-                } elseif (!empty($address['name'])) {
-                    $venueName = $address['name'];
-                } elseif (!empty($address['street_address'])) {
-                    $venueName = $address['street_address'];
-                }
+                if ($address) {
+                    if (!empty($address['supplemental_address_1'])) {
+                        $venueName = $address['supplemental_address_1'];
+                    } elseif (!empty($address['name'])) {
+                        $venueName = $address['name'];
+                    } elseif (!empty($address['street_address'])) {
+                        $venueName = $address['street_address'];
+                    }
 
-                // Construct Venue Address
-                $addressParts = [
-                    $address['street_address'] ?? '',
-                    $address['supplemental_address_2'] ?? '',
-                    $address['city'] ?? '',
-                    $address['postal_code'] ?? ''
-                ];
-                $venueAddress = implode(', ', array_filter($addressParts));
-
-                // Add GPS Coordinates
-                if (!empty($address['geo_code_1']) && !empty($address['geo_code_2'])) {
-                    $locations[] = [
-                        'latitude' => (float) $address['geo_code_1'],
-                        'longitude' => (float) $address['geo_code_2'],
-                        'relevantText' => $event['title'],
+                    $addressParts = [
+                        $address['street_address'] ?? '',
+                        $address['supplemental_address_2'] ?? '',
+                        $address['city'] ?? '',
+                        $address['postal_code'] ?? ''
                     ];
+                    $venueAddress = implode(', ', array_filter($addressParts));
+
+                    if (!empty($address['geo_code_1']) && !empty($address['geo_code_2'])) {
+                        $locations[] = [
+                            'latitude' => (float) $address['geo_code_1'],
+                            'longitude' => (float) $address['geo_code_2'],
+                            'relevantText' => $event['title'],
+                        ];
+                    }
                 }
             }
         }
 
-        // Generate QR Code Content
         $qrCodeContent = (string) $participant['id'];
 
-        // Normalize URLs
-        if ($websiteUrl && !preg_match("~^(?:f|ht)tps?://~i", $websiteUrl)) {
-            $websiteUrl = "https://" . $websiteUrl;
-        }
-        if ($contactUrl && !preg_match("~^(?:f|ht)tps?://~i", $contactUrl)) {
-            $contactUrl = "https://" . $contactUrl;
-        }
+        if ($websiteUrl && !preg_match("~^(?:f|ht)tps?://~i", $websiteUrl)) $websiteUrl = "https://" . $websiteUrl;
+        if ($contactUrl && !preg_match("~^(?:f|ht)tps?://~i", $contactUrl)) $contactUrl = "https://" . $contactUrl;
 
-        // Prepare Back Fields
         $backFields = [];
 
-        // Venue Info
         if ($venueName || $venueAddress) {
             $backFields[] = [
                 'key' => 'venue-info',
@@ -123,7 +107,6 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             ];
         }
 
-        // Description
         if (!empty($event['description'])) {
             $backFields[] = [
                 'key' => 'description',
@@ -132,14 +115,12 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             ];
         }
 
-        // Organizer
         $backFields[] = [
             'key' => 'organizer-name',
             'label' => 'Organisateur',
             'value' => $orgName,
         ];
 
-        // Website
         $backFields[] = [
             'key' => 'website',
             'label' => 'Informations',
@@ -147,7 +128,6 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             'attributedValue' => "<a href='$websiteUrl'>$websiteUrl</a>",
         ];
 
-        // Contact
         $backFields[] = [
             'key' => 'contact',
             'label' => 'Contact',
@@ -155,7 +135,6 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             'attributedValue' => "<a href='$contactUrl'>$contactUrl</a>",
         ];
 
-        // Prepare Auxiliary Fields
         $auxiliaryFields = [
             [
                 'key' => 'participant-name',
@@ -173,7 +152,6 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             ];
         }
 
-        // Prepare Pass Data Array
         $passData = [
             'description' => $event['title'],
             'formatVersion' => 1,
@@ -183,31 +161,31 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             'authenticationToken' => $authenticationToken,
             'webServiceURL' => CRM_Utils_System::baseCMSURL() . 'civi-wallet-api.php',
             'teamIdentifier' => $teamIdentifier,
-            'backgroundColor' => Civi::settings()->get('wallet_color_background') ?: 'rgb(83,180,89)', // CiviCRM Green
+            'backgroundColor' => Civi::settings()->get('wallet_color_background') ?: 'rgb(83,180,89)',
             'foregroundColor' => Civi::settings()->get('wallet_color_foreground') ?: 'rgb(255,255,255)',
             'labelColor' => Civi::settings()->get('wallet_color_label') ?: 'rgb(255,255,255)',
             'eventTicket' => [
                 'primaryFields' => [
                     [
                         'key' => 'event-name',
-                        'label' => $venueName, // Venue Name as Label
-                        'value' => $event['title'], // Event Title as Value (Large)
+                        'label' => $venueName,
+                        'value' => $event['title'],
                         'changeMessage' => 'L\'événement a changé : %@',
                     ],
                 ],
                 'secondaryFields' => [
                     [
                         'key' => 'start-date',
-                        'label' => 'DATE', // Uppercase
+                        'label' => 'DATE',
                         'value' => date('d M Y', strtotime($event['start_date'])),
-                        'textAlignment' => 'PKTextAlignmentLeft', // Try to force alignment
+                        'textAlignment' => 'PKTextAlignmentLeft',
                         'changeMessage' => 'La date a changé : %@',
                     ],
                     [
                         'key' => 'start-time',
-                        'label' => 'HEURE', // Uppercase
+                        'label' => 'HEURE',
                         'value' => date('H:i', strtotime($event['start_date'])),
-                        'textAlignment' => 'PKTextAlignmentRight', // Try to force alignment
+                        'textAlignment' => 'PKTextAlignmentRight',
                     ],
                 ],
                 'auxiliaryFields' => $auxiliaryFields,
@@ -224,13 +202,11 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             'expirationDate' => !empty($event['end_date']) ? date('c', strtotime($event['end_date'])) : date('c', strtotime($event['start_date'] . ' + 1 day')),
         ];
 
-        // Add Images
         $extPath = CRM_Extension_System::singleton()->getMapper()->keyToBasePath('one.jonathandhn.wallet');
         $imagesPath = $extPath . '/resources/images/';
         $iconPath = $imagesPath . 'icon.png';
         $logoPath = $imagesPath . 'logo.png';
 
-        // Add files if they exist
         if (file_exists($iconPath)) {
             $pass->addFile($iconPath, 'icon.png');
             $pass->addFile($iconPath, 'icon@2x.png');
@@ -240,77 +216,59 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             $pass->addFile($logoPath, 'logo@2x.png');
         }
 
-        // Custom Event Image -> strip.png (Main Visual)
         $customFields = self::getWalletCustomFields();
         if (!empty($customFields['image'])) {
             try {
-                $customImageId = civicrm_api3('Event', 'getvalue', ['id' => $event['id'], 'return' => 'custom_' . $customFields['image']]);
+                $customImageValue = \Civi\Api4\Event::get(FALSE)->addSelect('custom_' . $customFields['image'])->addWhere('id', '=', $event['id'])->execute()->first();
+                $customImageId = $customImageValue['custom_' . $customFields['image']] ?? null;
                 if ($customImageId) {
-                    $file = civicrm_api3('File', 'getsingle', ['id' => $customImageId]);
-                    $fileName = $file['uri'] ?? $file['uri_file'] ?? null;
+                    $file = \Civi\Api4\File::get(FALSE)->addWhere('id', '=', $customImageId)->execute()->first();
+                    $fileName = $file['uri'] ?? null;
                     if ($fileName) {
                         $customImagePath = CRM_Core_Config::singleton()->customFileUploadDir . $fileName;
                         if (file_exists($customImagePath)) {
-                            // Add as strip image (Main visual for Event Ticket)
                             $pass->addFile($customImagePath, 'strip.png');
                             $pass->addFile($customImagePath, 'strip@2x.png');
                         }
                     }
                 }
-            } catch (Exception $e) {
-                // Ignore missing image
-            }
+            } catch (Exception $e) {}
         }
 
-        // Custom Color Override
         if (!empty($customFields['color'])) {
             try {
-                $customColor = civicrm_api3('Event', 'getvalue', ['id' => $event['id'], 'return' => 'custom_' . $customFields['color']]);
+                $customColorValue = \Civi\Api4\Event::get(FALSE)->addSelect('custom_' . $customFields['color'])->addWhere('id', '=', $event['id'])->execute()->first();
+                $customColor = $customColorValue['custom_' . $customFields['color']] ?? null;
                 if ($customColor) {
                     list($r, $g, $b) = sscanf($customColor, "#%02x%02x%02x");
                     $passData['backgroundColor'] = "rgb($r,$g,$b)";
                 }
-            } catch (Exception $e) {
-            }
+            } catch (Exception $e) {}
         }
 
-        // Set Data ONCE
         $pass->setData($passData);
 
         return $pass->create();
     }
 
-    /**
-     * Create a Google Wallet Pass for a participant.
-     *
-     * @param array $participant Participant array from API.
-     * @param array $event Event array from API.
-     * @param string $qrCodeContent Content for the QR code.
-     * @return string JWT Link
-     */
     public static function createGooglePass($entityId)
     {
         $participantId = $entityId;
-        $participant = civicrm_api3('Participant', 'getsingle', ['id' => $participantId, 'check_permissions' => FALSE]);
-        $event = civicrm_api3('Event', 'getsingle', ['id' => $participant['event_id'], 'check_permissions' => FALSE]);
+        $participant = \Civi\Api4\Participant::get(FALSE)->addWhere('id', '=', $participantId)->execute()->first();
+        if (!$participant) throw new Exception("Participant not found");
+
+        $event = \Civi\Api4\Event::get(FALSE)->addWhere('id', '=', $participant['event_id'])->execute()->first();
         $qrCodeContent = (string) $participantId;
 
-        // Configuration
         $issuerId = Civi::settings()->get('wallet_google_issuer_id');
         $credentialsFile = Civi::settings()->get('wallet_google_credentials');
         $orgName = Civi::settings()->get('wallet_org_name') ?: 'SOS homophobie';
         $websiteUrl = Civi::settings()->get('wallet_website_url') ?: 'https://www.sos-homophobie.org';
         $contactUrl = Civi::settings()->get('wallet_contact_url') ?: 'https://www.sos-homophobie.org/nous-contacter';
 
-        // Ensure URLs are absolute
-        if ($websiteUrl && !preg_match("~^(?:f|ht)tps?://~i", $websiteUrl)) {
-            $websiteUrl = "https://" . $websiteUrl;
-        }
-        if ($contactUrl && !preg_match("~^(?:f|ht)tps?://~i", $contactUrl)) {
-            $contactUrl = "https://" . $contactUrl;
-        }
+        if ($websiteUrl && !preg_match("~^(?:f|ht)tps?://~i", $websiteUrl)) $websiteUrl = "https://" . $websiteUrl;
+        if ($contactUrl && !preg_match("~^(?:f|ht)tps?://~i", $contactUrl)) $contactUrl = "https://" . $contactUrl;
 
-        // Pretty URLs for display
         $prettyWebsiteUrl = preg_replace('#^https?://(www\.)?#', '', $websiteUrl);
         $prettyWebsiteUrl = rtrim($prettyWebsiteUrl, '/');
 
@@ -321,132 +279,104 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             throw new Exception("Google Wallet Credentials or Issuer ID not configured.");
         }
 
-        // Initialize Google Client
         $client = new \Google\Client();
         $client->setAuthConfig($credentialsFile);
         $client->addScope('https://www.googleapis.com/auth/wallet_object.issuer');
         $service = new \Google\Service\Walletobjects($client);
 
-        // Define Class ID and Object ID
         $classId = $issuerId . '.' . 'Event-' . $event['id'];
         $objectId = $issuerId . '.' . 'Participant-' . $participant['id'];
 
-        // Get Venue
         $venueName = 'TBA';
         $venueAddress = '';
         $gpsLocation = null;
         try {
-            $locBlockId = $event['loc_block_id'];
+            $locBlockId = $event['loc_block_id'] ?? null;
             if ($locBlockId) {
-                $locBlock = civicrm_api3('LocBlock', 'getsingle', ['id' => $locBlockId]);
-                if (!empty($locBlock['address_id'])) {
-                    $address = civicrm_api3('Address', 'getsingle', ['id' => $locBlock['address_id']]);
+                $locBlock = \Civi\Api4\LocBlock::get(FALSE)->addWhere('id', '=', $locBlockId)->execute()->first();
+                if ($locBlock && !empty($locBlock['address_id'])) {
+                    $address = \Civi\Api4\Address::get(FALSE)->addWhere('id', '=', $locBlock['address_id'])->execute()->first();
 
-                    // Fetch Country Name
-                    $countryName = '';
-                    if (!empty($address['country_id'])) {
-                        $countryName = CRM_Core_PseudoConstant::country($address['country_id']);
-                    }
+                    if ($address) {
+                        $countryName = '';
+                        if (!empty($address['country_id'])) {
+                            $countryName = CRM_Core_PseudoConstant::country($address['country_id']);
+                        }
 
-                    $addressParts = [
-                        $address['street_address'] ?? '',
-                        $address['supplemental_address_1'] ?? '',
-                        $address['supplemental_address_2'] ?? '',
-                        $address['city'] ?? '',
-                        $address['postal_code'] ?? '',
-                        $countryName
-                    ];
-                    $venueAddress = implode(', ', array_filter($addressParts));
-
-                    // Try to get venue name if possible (not standard in LocBlock, usually Address Name or similar)
-                    if (!empty($address['supplemental_address_1'])) {
-                        $venueName = $address['supplemental_address_1'];
-                    } elseif (!empty($address['name'])) {
-                        $venueName = $address['name'];
-                    } elseif (!empty($address['street_address'])) {
-                        $venueName = $address['street_address']; // Fallback
-                    }
-
-                    // GPS
-                    if (!empty($address['geo_code_1']) && !empty($address['geo_code_2'])) {
-                        $gpsLocation = [
-                            'kind' => 'walletobjects#latLongPoint',
-                            'latitude' => (float) $address['geo_code_1'],
-                            'longitude' => (float) $address['geo_code_2']
+                        $addressParts = [
+                            $address['street_address'] ?? '',
+                            $address['supplemental_address_1'] ?? '',
+                            $address['supplemental_address_2'] ?? '',
+                            $address['city'] ?? '',
+                            $address['postal_code'] ?? '',
+                            $countryName
                         ];
+                        $venueAddress = implode(', ', array_filter($addressParts));
+
+                        if (!empty($address['supplemental_address_1'])) {
+                            $venueName = $address['supplemental_address_1'];
+                        } elseif (!empty($address['name'])) {
+                            $venueName = $address['name'];
+                        } elseif (!empty($address['street_address'])) {
+                            $venueName = $address['street_address'];
+                        }
+
+                        if (!empty($address['geo_code_1']) && !empty($address['geo_code_2'])) {
+                            $gpsLocation = [
+                                'kind' => 'walletobjects#latLongPoint',
+                                'latitude' => (float) $address['geo_code_1'],
+                                'longitude' => (float) $address['geo_code_2']
+                            ];
+                        }
                     }
                 }
             }
-        } catch (Exception $e) {
-        } catch (Exception $e) {
-            // Silently fail for venue info
-        }
+        } catch (Exception $e) {}
 
-        // Image URLs (Must be public)
         $extUrl = CRM_Extension_System::singleton()->getMapper()->keyToUrl('one.jonathandhn.wallet');
-        $timestamp = time(); // Cache buster to force update
+        $timestamp = time();
 
         $logoUrl = $extUrl . '/resources/images/icon.png?v=' . $timestamp;
         $heroUrl = $extUrl . '/resources/images/logo.png?v=' . $timestamp;
 
-        $logoUrl = $extUrl . '/resources/images/icon.png?v=' . $timestamp;
-        $heroUrl = $extUrl . '/resources/images/logo.png?v=' . $timestamp;
-
-        // Event Overrides (Custom Fields)
         $customFields = self::getWalletCustomFields();
         $customColor = null;
 
-        // 1. Color Override
         if (!empty($customFields['color'])) {
             try {
-                $customColor = civicrm_api3('Event', 'getvalue', ['id' => $event['id'], 'return' => 'custom_' . $customFields['color']]);
-            } catch (Exception $e) {
-                // Ignore if not set
-            }
+                $customColorValue = \Civi\Api4\Event::get(FALSE)->addSelect('custom_' . $customFields['color'])->addWhere('id', '=', $event['id'])->execute()->first();
+                $customColor = $customColorValue['custom_' . $customFields['color']] ?? null;
+            } catch (Exception $e) {}
         }
 
-        // 2. Image Override (Hero Image)
         if (!empty($customFields['image'])) {
             try {
-                $customImageId = civicrm_api3('Event', 'getvalue', ['id' => $event['id'], 'return' => 'custom_' . $customFields['image']]);
+                $customImageValue = \Civi\Api4\Event::get(FALSE)->addSelect('custom_' . $customFields['image'])->addWhere('id', '=', $event['id'])->execute()->first();
+                $customImageId = $customImageValue['custom_' . $customFields['image']] ?? null;
                 if ($customImageId) {
-                    try {
-                        $file = civicrm_api3('File', 'getsingle', ['id' => $customImageId]);
+                    $file = \Civi\Api4\File::get(FALSE)->addWhere('id', '=', $customImageId)->execute()->first();
+                    $fileName = $file['uri'] ?? null;
 
-                        // API v3 returns 'uri' for the filename
-                        $fileName = $file['uri'] ?? $file['uri_file'] ?? null;
+                    if (!empty($fileName)) {
+                        $config = CRM_Core_Config::singleton();
+                        $src = $config->customFileUploadDir . $fileName;
 
-                        if (!empty($fileName)) {
-                            $config = CRM_Core_Config::singleton();
-                            $src = $config->customFileUploadDir . $fileName;
+                        if (file_exists($src)) {
+                            $extPath = CRM_Extension_System::singleton()->getMapper()->keyToBasePath('one.jonathandhn.wallet');
+                            $publicImgDir = $extPath . '/resources/images/events/';
+                            if (!file_exists($publicImgDir)) mkdir($publicImgDir, 0755, true);
 
-                            if (file_exists($src)) {
-                                // Copy to public extension resource folder
-                                $extPath = CRM_Extension_System::singleton()->getMapper()->keyToBasePath('one.jonathandhn.wallet');
-                                $publicImgDir = $extPath . '/resources/images/events/';
-                                if (!file_exists($publicImgDir)) {
-                                    mkdir($publicImgDir, 0755, true);
-                                }
-
-                                $destName = 'event-' . $event['id'] . '.png';
-                                $dest = $publicImgDir . $destName;
-                                $copyResult = copy($src, $dest);
-
-                                if ($copyResult) {
-                                    $heroUrl = $extUrl . '/resources/images/events/' . $destName . '?v=' . $timestamp;
-                                }
+                            $destName = 'event-' . $event['id'] . '.png';
+                            $dest = $publicImgDir . $destName;
+                            if (copy($src, $dest)) {
+                                $heroUrl = $extUrl . '/resources/images/events/' . $destName . '?v=' . $timestamp;
                             }
                         }
-                    } catch (Exception $e) {
-                        // Silent fail
                     }
                 }
-            } catch (Exception $e) {
-                // Ignore if not set
-            }
+            } catch (Exception $e) {}
         }
 
-        // Prepare Class Metadata
         $classMetadata = [
             'id' => $classId,
             'issuerName' => $orgName,
@@ -463,7 +393,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             'heroImage' => [
                 'sourceUri' => ['uri' => $heroUrl]
             ],
-            'hexBackgroundColor' => Civi::settings()->get('wallet_color_background') ?: '#53b459', // CiviCRM Green
+            'hexBackgroundColor' => Civi::settings()->get('wallet_color_background') ?: '#53b459',
             'dateTime' => [
                 'start' => date('Y-m-d\TH:i:s', strtotime($event['start_date'])),
                 'end' => !empty($event['end_date']) ? date('Y-m-d\TH:i:s', strtotime($event['end_date'])) : date('Y-m-d\TH:i:s', strtotime($event['start_date'] . ' + 1 day')),
@@ -498,7 +428,6 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             $classMetadata['hexBackgroundColor'] = $customColor;
         }
 
-        // Add Venue if available
         if ($venueName && $venueName !== 'TBA') {
             $classMetadata['venue'] = [
                 'name' => [
@@ -514,34 +443,26 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
                     ]
                 ]
             ];
-
-            // GPS
-            if (!empty($address['geo_code_1']) && !empty($address['geo_code_2'])) {
-                $gpsLocation = [
-                    'kind' => 'walletobjects#latLongPoint',
-                    'latitude' => (float) $address['geo_code_1'],
-                    'longitude' => (float) $address['geo_code_2']
-                ];
+            if ($gpsLocation) {
+                // To attach GPS directly to class, the format requires setting lat/long on venue.
+                // However EventTicketObject supports locations directly, which we attach later.
             }
         }
 
         $classObj = new \Google\Service\Walletobjects\EventTicketClass($classMetadata);
 
-        // Check if class exists, otherwise create it
         try {
             $service->eventticketclass->get($classId);
             $service->eventticketclass->update($classId, $classObj);
         } catch (\Google\Service\Exception $e) {
             if ($e->getCode() == 404) {
-                // Create Class
                 $service->eventticketclass->insert($classObj);
             } else {
                 throw $e;
             }
         }
 
-        // Fetch Contact
-        $contact = civicrm_api3('Contact', 'getsingle', ['id' => $participant['contact_id']]);
+        $contact = \Civi\Api4\Contact::get(FALSE)->addWhere('id', '=', $participant['contact_id'])->execute()->first();
 
         $textModulesData = [
             [
@@ -557,7 +478,6 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             ];
         }
 
-        // Check if object exists, otherwise create it
         $objectMetadata = [
             'id' => $objectId,
             'classId' => $classId,
@@ -570,13 +490,13 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             'linksModuleData' => [
                 'uris' => [
                     [
-                        'uri' => $websiteUrl, // Must be absolute (https://...)
-                        'description' => $prettyWebsiteUrl ?: $websiteUrl, // Display text
+                        'uri' => $websiteUrl,
+                        'description' => $prettyWebsiteUrl ?: $websiteUrl,
                         'id' => 'website_link'
                     ],
                     [
-                        'uri' => $contactUrl, // Must be absolute (https://...)
-                        'description' => E::ts('Contact'), // Display text
+                        'uri' => $contactUrl,
+                        'description' => E::ts('Contact'),
                         'id' => 'contact_link'
                     ]
                 ]
@@ -588,7 +508,6 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             ]
         ];
 
-        // Add GPS to Object (for notifications)
         if ($gpsLocation) {
             $objectMetadata['locations'] = [$gpsLocation];
         }
@@ -606,11 +525,6 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             }
         }
 
-        // Generate JWT Link
-        // We need to create a JWT that claims this object.
-        // Google PHP Client doesn't have a direct helper for the "Save to Android Pay" JWT link generation 
-        // in the same way as the old libraries, but we can construct the claims and sign it.
-
         $claims = [
             'iss' => $client->getConfig('client_email'),
             'aud' => 'google',
@@ -623,25 +537,38 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             ]
         ];
 
-        // Sign JWT manually using the private key from credentials
         $key = json_decode(file_get_contents($credentialsFile), true)['private_key'];
-
-        // Simple JWT signing (HS256 or RS256? Google Service Account uses RS256)
-        // We can use firebase/php-jwt if available, or do it manually if we want to avoid deps, 
-        // but google/apiclient usually pulls in phpseclib or similar.
-        // Actually, let's use the Google Client to sign if possible, or just use a simple JWT lib function.
-        // Since we might not have firebase/php-jwt, let's try to use what's available.
-        // But wait, `google/apiclient` depends on `firebase/php-jwt`.
 
         if (class_exists('\Firebase\JWT\JWT')) {
             $token = \Firebase\JWT\JWT::encode($claims, $key, 'RS256');
         } else {
-            // Fallback or Error
             throw new Exception("Firebase JWT library not found. Run composer update.");
         }
 
         return "https://pay.google.com/gp/v/save/{$token}";
     }
 
-    
+    private static function getWalletCustomFields()
+    {
+        static $fields = null;
+        if ($fields === null) {
+            $fields = [];
+            try {
+                $colorField = \Civi\Api4\CustomField::get(FALSE)
+                    ->addWhere('name', '=', 'Wallet_Background_Color')
+                    ->addWhere('custom_group_id.name', '=', 'Wallet_Settings')
+                    ->execute()->first();
+                if ($colorField) $fields['color'] = $colorField['id'];
+            } catch (Exception $e) {}
+
+            try {
+                $imageField = \Civi\Api4\CustomField::get(FALSE)
+                    ->addWhere('name', '=', 'Wallet_Image')
+                    ->addWhere('custom_group_id.name', '=', 'Wallet_Settings')
+                    ->execute()->first();
+                if ($imageField) $fields['image'] = $imageField['id'];
+            } catch (Exception $e) {}
+        }
+        return $fields;
+    }
 }

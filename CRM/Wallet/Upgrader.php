@@ -36,16 +36,18 @@ class CRM_Wallet_Upgrader extends CRM_Extension_Upgrader_Base
         return TRUE;
     }
 
-    public function upgrade_1002()
+        public function upgrade_1002()
     {
         try {
-            // Update the Custom Group to be not public
-            // We use 'create' with ID (or name) to update existing records.
-            $group = civicrm_api3('CustomGroup', 'getsingle', ['name' => 'Wallet_Settings']);
-            civicrm_api3('CustomGroup', 'create', [
-                'id' => $group['id'],
-                'is_public' => 0,
-            ]);
+            $group = \Civi\Api4\CustomGroup::get(FALSE)
+                ->addWhere('name', '=', 'Wallet_Settings')
+                ->execute()->first();
+            if ($group) {
+                \Civi\Api4\CustomGroup::update(FALSE)
+                    ->addWhere('id', '=', $group['id'])
+                    ->addValue('is_public', 0)
+                    ->execute();
+            }
         } catch (Exception $e) {
             $this->ctx->log->warning("Upgrade 1002: Could not find or update Wallet_Settings group. " . $e->getMessage());
         }
@@ -87,51 +89,59 @@ class CRM_Wallet_Upgrader extends CRM_Extension_Upgrader_Base
 
     private function createCustomFields()
     {
-        // Check if Custom Group exists
         try {
-            $group = civicrm_api3('CustomGroup', 'getsingle', ['name' => 'Wallet_Settings']);
-        } catch (Exception $e) {
-            // Create it
-            $group = civicrm_api3('CustomGroup', 'create', [
-                'name' => 'Wallet_Settings',
-                'title' => 'Wallet Settings',
-                'extends' => 'Event',
-                'style' => 'Inline',
-                'is_active' => 1,
-                'is_public' => 0, // Hidden from public forms
-            ]);
-        }
+            $group = \Civi\Api4\CustomGroup::get(FALSE)
+                ->addWhere('name', '=', 'Wallet_Settings')
+                ->execute()->first();
+            
+            if (!$group) {
+                $group = \Civi\Api4\CustomGroup::create(FALSE)
+                    ->addValue('name', 'Wallet_Settings')
+                    ->addValue('title', 'Wallet Settings')
+                    ->addValue('extends', 'Event')
+                    ->addValue('style', 'Inline')
+                    ->addValue('is_active', 1)
+                    ->addValue('is_public', 0)
+                    ->execute()->first();
+            }
 
-        // Check if Field exists
-        try {
-            civicrm_api3('CustomField', 'getsingle', ['name' => 'Wallet_Image', 'custom_group_id' => $group['id']]);
-        } catch (Exception $e) {
-            civicrm_api3('CustomField', 'create', [
-                'custom_group_id' => $group['id'],
-                'name' => 'Wallet_Image',
-                'label' => 'Wallet Image (Icon)',
-                'html_type' => 'File',
-                'data_type' => 'File',
-                'is_active' => 1,
-            ]);
-        }
+            $imageField = \Civi\Api4\CustomField::get(FALSE)
+                ->addWhere('name', '=', 'Wallet_Image')
+                ->addWhere('custom_group_id', '=', $group['id'])
+                ->execute()->first();
+            
+            if (!$imageField) {
+                \Civi\Api4\CustomField::create(FALSE)
+                    ->addValue('custom_group_id', $group['id'])
+                    ->addValue('name', 'Wallet_Image')
+                    ->addValue('label', 'Wallet Image (Icon)')
+                    ->addValue('html_type', 'File')
+                    ->addValue('data_type', 'File')
+                    ->addValue('is_active', 1)
+                    ->execute();
+            }
 
-        // Add Background Color override
-        try {
-            civicrm_api3('CustomField', 'getsingle', ['name' => 'Wallet_Background_Color', 'custom_group_id' => $group['id']]);
+            $colorField = \Civi\Api4\CustomField::get(FALSE)
+                ->addWhere('name', '=', 'Wallet_Background_Color')
+                ->addWhere('custom_group_id', '=', $group['id'])
+                ->execute()->first();
+
+            if (!$colorField) {
+                \Civi\Api4\CustomField::create(FALSE)
+                    ->addValue('custom_group_id', $group['id'])
+                    ->addValue('name', 'Wallet_Background_Color')
+                    ->addValue('label', 'Wallet Background Color')
+                    ->addValue('html_type', 'Text')
+                    ->addValue('data_type', 'String')
+                    ->addValue('is_active', 1)
+                    ->addValue('help_post', 'Hex color code (e.g. #ea148c)')
+                    ->execute();
+            }
+
         } catch (Exception $e) {
-            civicrm_api3('CustomField', 'create', [
-                'custom_group_id' => $group['id'],
-                'name' => 'Wallet_Background_Color',
-                'label' => 'Wallet Background Color',
-                'html_type' => 'Text',
-                'data_type' => 'String',
-                'is_active' => 1,
-                'help_post' => 'Hex color code (e.g. #ea148c)',
-            ]);
+            $this->ctx->log->error("Error creating custom fields: " . $e->getMessage());
         }
     }
-
     public function postUpgrade($opQueue, $revQueue, $originalVer, $targetVer)
     {
         parent::postUpgrade($opQueue, $revQueue, $originalVer, $targetVer);
