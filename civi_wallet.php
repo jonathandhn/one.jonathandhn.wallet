@@ -121,6 +121,22 @@ function civi_wallet_access_always_allow()
     return true;
 }
 
+function civi_wallet_get_qr_color()
+{
+    $color = ltrim((string) (Civi::settings()->get('wallet_color_foreground') ?: '000000'), '#');
+
+    if (strlen($color) !== 6 || !ctype_xdigit($color)) {
+        return '000000';
+    }
+
+    $r = hexdec(substr($color, 0, 2));
+    $g = hexdec(substr($color, 2, 2));
+    $b = hexdec(substr($color, 4, 2));
+    $luminance = (0.299 * $r) + (0.587 * $g) + (0.114 * $b);
+
+    return $luminance > 200 ? '000000' : strtolower($color);
+}
+
 /**
  * Implements hook_civicrm_alterMenu().
  *
@@ -253,15 +269,15 @@ function civi_wallet_civicrm_tokenValues(&$values, $cids, $job = null, $tokens =
             
             $values[$cid]['contact.wallet_links_donor'] = $htmlDonor;
 
-            $color = ltrim(Civi::settings()->get('wallet_color_foreground') ?: '000000', '#');
+            $color = civi_wallet_get_qr_color();
             $qrUrl = CRM_Utils_System::url('civicrm/wallet/api/qr', "entity=membership&cid={$cid}&cs={$cs}&color={$color}", true, null, false, true);
             $values[$cid]['contact.qr_membership'] = "<img src='{$qrUrl}' width='150' height='150' alt='" . E::ts('QR Code') . "'>";
 
-            $color = ltrim(Civi::settings()->get('wallet_color_foreground') ?: '000000', '#');
+            $color = civi_wallet_get_qr_color();
             $qrUrl = CRM_Utils_System::url('civicrm/wallet/api/qr', "entity=participant&cid={$cid}&cs={$cs}&color={$color}", true, null, false, true);
             $values[$cid]['participant.qr_participant'] = "<img src='{$qrUrl}' width='150' height='150' alt='" . E::ts('QR Code') . "'>";
 
-            $color = ltrim(Civi::settings()->get('wallet_color_foreground') ?: '000000', '#');
+            $color = civi_wallet_get_qr_color();
             $qrUrl = CRM_Utils_System::url('civicrm/wallet/api/qr', "entity=donor&cid={$cid}&cs={$cs}&color={$color}", true, null, false, true);
             $values[$cid]['contact.qr_donor'] = "<img src='{$qrUrl}' width='150' height='150' alt='" . E::ts('QR Code') . "'>";
         }

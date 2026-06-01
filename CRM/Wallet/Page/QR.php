@@ -8,6 +8,22 @@ use chillerlan\QRCode\Output\QRGdImagePNG;
 
 class CRM_Wallet_Page_QR extends CRM_Core_Page
 {
+    private function normalizeQrColor($colorHex)
+    {
+        $colorHex = ltrim((string) $colorHex, '#');
+
+        if (strlen($colorHex) !== 6 || !ctype_xdigit($colorHex)) {
+            return '000000';
+        }
+
+        $r = hexdec(substr($colorHex, 0, 2));
+        $g = hexdec(substr($colorHex, 2, 2));
+        $b = hexdec(substr($colorHex, 4, 2));
+        $luminance = (0.299 * $r) + (0.587 * $g) + (0.114 * $b);
+
+        return $luminance > 200 ? '000000' : strtolower($colorHex);
+    }
+
     private function resolveParticipantByContact($contactId)
     {
         return \Civi\Api4\Participant::get(FALSE)
@@ -26,7 +42,7 @@ class CRM_Wallet_Page_QR extends CRM_Core_Page
         $entity = CRM_Utils_Request::retrieve('entity', 'String', CRM_Core_DAO::$_nullObject, TRUE);
         $hash = CRM_Utils_Request::retrieve('cs', 'String', CRM_Core_DAO::$_nullObject, FALSE, '');
         $colorHex = CRM_Utils_Request::retrieve('color', 'String', CRM_Core_DAO::$_nullObject, FALSE, '000000');
-        $colorHex = ltrim($colorHex, '#');
+        $colorHex = $this->normalizeQrColor($colorHex);
 
         if (!in_array($entity, ['participant', 'membership', 'donor'])) {
             CRM_Utils_System::permissionDenied();
