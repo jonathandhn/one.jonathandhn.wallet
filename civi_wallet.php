@@ -63,6 +63,20 @@ function civi_wallet_civicrm_post($op, $objectName, $objectId, &$objectRef)
         } elseif ($objectName == 'Contact') {
             // Update pass for this contact
             CRM_Wallet_BAO_Pass::updatePasses('Contact', $objectId);
+        } elseif ($objectName == 'Contribution') {
+            try {
+                $contribution = \Civi\Api4\Contribution::get(FALSE)
+                    ->addSelect('contact_id', 'contribution_status_id:name')
+                    ->addWhere('id', '=', $objectId)
+                    ->execute()
+                    ->first();
+
+                if ($contribution && !empty($contribution['contact_id']) && ($contribution['contribution_status_id:name'] ?? null) === 'Completed') {
+                    CRM_Wallet_BAO_Pass::updatePasses('Donor', $contribution['contact_id']);
+                }
+            } catch (Exception $e) {
+                CRM_Core_Error::debug_log_message("CiviWallet Contribution Hook Error: " . $e->getMessage());
+            }
         }
     }
 }

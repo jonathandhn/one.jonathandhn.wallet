@@ -74,13 +74,29 @@ class CRM_Wallet_PassType_Donor
         $qrCodeContent = $barcodeValue;
         $qrCodeAltText = is_numeric($qrCodeContent) ? $qrCodeContent : '';
 
+        $dao = CRM_Core_DAO::executeQuery("SELECT * FROM civicrm_wallet_pass WHERE entity_table = 'civicrm_donor' AND entity_id = %1 AND type = 'apple'", [1 => [$contactId, 'Integer']]);
+        if ($dao->fetch()) {
+            $serialNumber = $dao->serial_number;
+            $authenticationToken = $dao->authentication_token;
+        } else {
+            $serialNumber = 'donor_' . $contactId;
+            $authenticationToken = md5(uniqid(rand(), true));
+            CRM_Core_DAO::executeQuery("INSERT INTO civicrm_wallet_pass (entity_table, entity_id, type, serial_number, authentication_token) VALUES ('civicrm_donor', %1, 'apple', %2, %3)", [
+                1 => [$contactId, 'Integer'],
+                2 => [$serialNumber, 'String'],
+                3 => [$authenticationToken, 'String'],
+            ]);
+        }
+
         // Generate Pass
         $pass = new PKPass($certPath, $certPassword);
         
         $passData = [
             'formatVersion' => 1,
             'passTypeIdentifier' => $passTypeId,
-            'serialNumber' => 'donor_' . $contactId,
+            'serialNumber' => $serialNumber,
+            'authenticationToken' => $authenticationToken,
+            'webServiceURL' => rtrim(CRM_Utils_System::baseCMSURL(), '/') . '/civicrm/wallet/api',
             'teamIdentifier' => $teamId,
             'organizationName' => $orgName,
             'description' => $orgDesc,
@@ -263,6 +279,20 @@ class CRM_Wallet_PassType_Donor
         $empty = null;
         $barcodeEntityType = 'Contact';
         CRM_Utils_Hook::singleton()->invoke(['barcodeValue', 'entityType', 'entityId'], $barcodeValue, $barcodeEntityType, $contactId, $empty, $empty, $empty, 'civicrm_wallet_barcode_alter');
+
+        $dao = CRM_Core_DAO::executeQuery("SELECT authentication_token, serial_number FROM civicrm_wallet_pass WHERE entity_table = 'civicrm_donor' AND entity_id = %1 AND type = 'google'", [1 => [$contactId, 'Integer']]);
+        if ($dao->fetch()) {
+            $authenticationToken = $dao->authentication_token;
+            $serialNumber = $dao->serial_number;
+        } else {
+            $authenticationToken = md5(uniqid(rand(), true));
+            $serialNumber = 'donor_' . $contactId;
+            CRM_Core_DAO::executeQuery("INSERT INTO civicrm_wallet_pass (entity_table, entity_id, type, serial_number, authentication_token) VALUES ('civicrm_donor', %1, 'google', %2, %3)", [
+                1 => [$contactId, 'Integer'],
+                2 => [$serialNumber, 'String'],
+                3 => [$authenticationToken, 'String'],
+            ]);
+        }
 
         $objectMetadata = [
             'id' => $objectId,

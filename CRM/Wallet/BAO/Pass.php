@@ -54,6 +54,8 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO
             if ($membership) {
                 $tasks[] = ['table' => 'civicrm_contact', 'id' => $membership['contact_id']];
             }
+        } elseif ($entity == 'Donor') {
+            $tasks[] = ['table' => 'civicrm_donor', 'id' => $id];
         } elseif ($entity == 'Contact') {
             $tasks[] = ['table' => 'civicrm_contact', 'id' => $id];
         }
