@@ -3,6 +3,38 @@
     {ts}Configure your Apple and Google Wallet settings here.{/ts}
   </div>
 
+  <h3>{ts}Channel Flags{/ts}</h3>
+  <table class="form-layout-compressed">
+    <tr class="crm-wallet-channel-apple-form-block-wallet_channel_apple_enabled">
+      <td class="label">{$form.wallet_channel_apple_enabled.label}</td>
+      <td>{$form.wallet_channel_apple_enabled.html}</td>
+    </tr>
+    <tr class="crm-wallet-channel-google-form-block-wallet_channel_google_enabled">
+      <td class="label">{$form.wallet_channel_google_enabled.label}</td>
+      <td>{$form.wallet_channel_google_enabled.html}</td>
+    </tr>
+    <tr class="crm-wallet-channel-qr-form-block-wallet_channel_qr_enabled">
+      <td class="label">{$form.wallet_channel_qr_enabled.label}</td>
+      <td>{$form.wallet_channel_qr_enabled.html}</td>
+    </tr>
+  </table>
+
+  <h3>{ts}Pass Type Flags{/ts}</h3>
+  <table class="form-layout-compressed">
+    <tr class="crm-wallet-type-participant-form-block-wallet_type_participant_enabled">
+      <td class="label">{$form.wallet_type_participant_enabled.label}</td>
+      <td>{$form.wallet_type_participant_enabled.html}</td>
+    </tr>
+    <tr class="crm-wallet-type-membership-form-block-wallet_type_membership_enabled">
+      <td class="label">{$form.wallet_type_membership_enabled.label}</td>
+      <td>{$form.wallet_type_membership_enabled.html}</td>
+    </tr>
+    <tr class="crm-wallet-type-donor-form-block-wallet_type_donor_enabled">
+      <td class="label">{$form.wallet_type_donor_enabled.label}</td>
+      <td>{$form.wallet_type_donor_enabled.html}</td>
+    </tr>
+  </table>
+
   <h3>{ts}Apple Wallet Settings{/ts}</h3>
   <table class="form-layout-compressed">
     <tr class="crm-wallet-apple-pass-type-id-form-block-wallet_apple_pass_type_id">

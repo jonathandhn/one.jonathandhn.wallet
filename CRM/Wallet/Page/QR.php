@@ -8,6 +8,22 @@ use chillerlan\QRCode\Output\QRGdImagePNG;
 
 class CRM_Wallet_Page_QR extends CRM_Core_Page
 {
+    private function isQrEnabled()
+    {
+        return (bool) Civi::settings()->get('wallet_channel_qr_enabled');
+    }
+
+    private function isContextEnabled($entity)
+    {
+        $map = [
+            'participant' => 'wallet_type_participant_enabled',
+            'membership' => 'wallet_type_membership_enabled',
+            'donor' => 'wallet_type_donor_enabled',
+        ];
+
+        return (bool) Civi::settings()->get($map[$entity] ?? '');
+    }
+
     private function normalizeQrColor($colorHex)
     {
         $colorHex = ltrim((string) $colorHex, '#');
@@ -44,7 +60,7 @@ class CRM_Wallet_Page_QR extends CRM_Core_Page
         $colorHex = CRM_Utils_Request::retrieve('color', 'String', CRM_Core_DAO::$_nullObject, FALSE, '000000');
         $colorHex = $this->normalizeQrColor($colorHex);
 
-        if (!in_array($entity, ['participant', 'membership', 'donor'])) {
+        if (!in_array($entity, ['participant', 'membership', 'donor']) || !$this->isQrEnabled() || !$this->isContextEnabled($entity)) {
             CRM_Utils_System::permissionDenied();
         }
 

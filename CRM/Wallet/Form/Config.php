@@ -9,6 +9,12 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting
         'wallet_apple_cert_password' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
         'wallet_apple_pass_type_id' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
         'wallet_apple_team_id' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
+        'wallet_channel_apple_enabled' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
+        'wallet_channel_google_enabled' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
+        'wallet_channel_qr_enabled' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
+        'wallet_type_participant_enabled' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
+        'wallet_type_membership_enabled' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
+        'wallet_type_donor_enabled' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
         'wallet_google_credentials' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
         'wallet_google_issuer_id' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
         'wallet_org_name' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
@@ -34,6 +40,16 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting
     public function buildQuickForm()
     {
         $this->applyFilter('__ALL__', 'trim');
+
+        // --- Channel Flags ---
+        $this->add('advcheckbox', 'wallet_channel_apple_enabled', E::ts('Enable Apple Wallet'));
+        $this->add('advcheckbox', 'wallet_channel_google_enabled', E::ts('Enable Google Wallet'));
+        $this->add('advcheckbox', 'wallet_channel_qr_enabled', E::ts('Enable local QR'));
+
+        // --- Pass Type Flags ---
+        $this->add('advcheckbox', 'wallet_type_participant_enabled', E::ts('Enable Event Tickets'));
+        $this->add('advcheckbox', 'wallet_type_membership_enabled', E::ts('Enable Membership Cards'));
+        $this->add('advcheckbox', 'wallet_type_donor_enabled', E::ts('Enable Donor Cards'));
 
         // --- Apple Wallet Settings ---
         $this->add('text', 'wallet_apple_pass_type_id', E::ts('Pass Type ID'), ['size' => 50, 'placeholder' => 'pass.com.example.my-pass']);
@@ -153,6 +169,12 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting
             'wallet_apple_pass_type_id',
             'wallet_apple_team_id',
             'wallet_apple_cert_password',
+            'wallet_channel_apple_enabled',
+            'wallet_channel_google_enabled',
+            'wallet_channel_qr_enabled',
+            'wallet_type_participant_enabled',
+            'wallet_type_membership_enabled',
+            'wallet_type_donor_enabled',
             'wallet_google_issuer_id',
             'wallet_org_name',
             'wallet_org_description',

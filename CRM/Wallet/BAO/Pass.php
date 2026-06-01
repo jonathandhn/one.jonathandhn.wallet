@@ -5,12 +5,37 @@ use CRM_Wallet_ExtensionUtil as E;
 
 class CRM_Wallet_BAO_Pass extends CRM_Core_DAO
 {
+    private static function isChannelEnabled($type)
+    {
+        $map = [
+            'apple' => 'wallet_channel_apple_enabled',
+            'google' => 'wallet_channel_google_enabled',
+        ];
+
+        return (bool) Civi::settings()->get($map[$type] ?? '');
+    }
+
+    private static function isEntityTableEnabled($entityTable)
+    {
+        $map = [
+            'civicrm_participant' => 'wallet_type_participant_enabled',
+            'civicrm_contact' => 'wallet_type_membership_enabled',
+            'civicrm_membership' => 'wallet_type_membership_enabled',
+            'civicrm_donor' => 'wallet_type_donor_enabled',
+        ];
+
+        return (bool) Civi::settings()->get($map[$entityTable] ?? '');
+    }
 
     /**
      * Create an Apple Wallet Pass for a participant or membership.
      */
     public static function createApplePass($entityTable, $entityId)
     {
+        if (!self::isChannelEnabled('apple') || !self::isEntityTableEnabled($entityTable)) {
+            throw new Exception("Apple Wallet channel or pass type disabled.");
+        }
+
         if ($entityTable === 'civicrm_participant') {
             return CRM_Wallet_PassType_Participant::createApplePass($entityId);
         } elseif ($entityTable === 'civicrm_contact' || $entityTable === 'civicrm_membership') {
@@ -23,6 +48,10 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO
 
     public static function createGooglePass($entityTable, $entityId)
     {
+        if (!self::isChannelEnabled('google') || !self::isEntityTableEnabled($entityTable)) {
+            throw new Exception("Google Wallet channel or pass type disabled.");
+        }
+
         if ($entityTable === 'civicrm_participant') {
             return CRM_Wallet_PassType_Participant::createGooglePass($entityId);
         } elseif ($entityTable === 'civicrm_contact' || $entityTable === 'civicrm_membership') {
@@ -83,23 +112,27 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO
     public static function processPassUpdate(CRM_Queue_TaskContext $ctx, $entityTable, $entityId)
     {
         // 1. Update Google Wallet
-        try {
-            self::createGooglePass($entityTable, $entityId);
-        } catch (Exception $e) {
-            // Ignore Google errors
-            CRM_Core_Error::debug_log_message("Google Wallet Update Error: " . $e->getMessage());
+        if (self::isChannelEnabled('google') && self::isEntityTableEnabled($entityTable)) {
+            try {
+                self::createGooglePass($entityTable, $entityId);
+            } catch (Exception $e) {
+                // Ignore Google errors
+                CRM_Core_Error::debug_log_message("Google Wallet Update Error: " . $e->getMessage());
+            }
         }
 
         // 2. Update Apple Wallet (Push Notification)
-        $dao = CRM_Core_DAO::executeQuery("
-            SELECT d.push_token
-            FROM civicrm_wallet_device d
-            JOIN civicrm_wallet_pass p ON d.pass_id = p.id
-            WHERE p.entity_table = %1 AND p.entity_id = %2 AND p.type = 'apple'
-        ", [1 => [$entityTable, 'String'], 2 => [$entityId, 'Integer']]);
+        if (self::isChannelEnabled('apple') && self::isEntityTableEnabled($entityTable)) {
+            $dao = CRM_Core_DAO::executeQuery("
+                SELECT d.push_token
+                FROM civicrm_wallet_device d
+                JOIN civicrm_wallet_pass p ON d.pass_id = p.id
+                WHERE p.entity_table = %1 AND p.entity_id = %2 AND p.type = 'apple'
+            ", [1 => [$entityTable, 'String'], 2 => [$entityId, 'Integer']]);
 
-        while ($dao->fetch()) {
-            self::sendApplePushNotification($dao->push_token);
+            while ($dao->fetch()) {
+                self::sendApplePushNotification($dao->push_token);
+            }
         }
 
         // Update last_updated timestamp
