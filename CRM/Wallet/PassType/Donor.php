@@ -5,6 +5,28 @@ use CRM_Wallet_ExtensionUtil as E;
 
 class CRM_Wallet_PassType_Donor
 {
+    private static function buildContactContextUrl($url, $contactId)
+    {
+        if (empty($url)) {
+            return null;
+        }
+
+        $cs = CRM_Contact_BAO_Contact_Utils::generateChecksum($contactId);
+        $query = "cid={$contactId}&cs={$cs}";
+
+        if (strpos($url, 'http') !== 0) {
+            return CRM_Utils_System::url($url, "reset=1&{$query}", true, null, false, true);
+        }
+
+        $separator = (strpos($url, '?') === false) ? '?' : '&';
+
+        if (strpos($url, 'cid=') !== false || strpos($url, 'cs=') !== false) {
+            return $url;
+        }
+
+        return $url . $separator . $query;
+    }
+
     public static function createApplePass($contactId)
     {
         $contact = \Civi\Api4\Contact::get(FALSE)
@@ -24,17 +46,8 @@ class CRM_Wallet_PassType_Donor
         $orgName = Civi::settings()->get('wallet_org_name') ?: CRM_Core_BAO_Domain::getDomain()->name;
         $orgDesc = Civi::settings()->get('wallet_org_description') ?: $orgName;
         
-        $profileUrl = Civi::settings()->get('wallet_donor_profile_url') ?: Civi::settings()->get('wallet_membership_profile_url');
-        if ($profileUrl && strpos($profileUrl, 'http') !== 0) {
-            $cs = CRM_Contact_BAO_Contact_Utils::generateChecksum($contactId);
-            $profileUrl = CRM_Utils_System::url($profileUrl, "reset=1&cid={$contactId}&cs={$cs}", true, null, false, true);
-        }
-
-        $donateUrl = Civi::settings()->get('wallet_donor_donate_url') ?: Civi::settings()->get('wallet_membership_renew_url');
-        if ($donateUrl && strpos($donateUrl, 'http') !== 0) {
-            $cs = CRM_Contact_BAO_Contact_Utils::generateChecksum($contactId);
-            $donateUrl = CRM_Utils_System::url($donateUrl, "reset=1&cid={$contactId}&cs={$cs}", true, null, false, true);
-        }
+        $profileUrl = self::buildContactContextUrl(Civi::settings()->get('wallet_donor_profile_url') ?: Civi::settings()->get('wallet_membership_profile_url'), $contactId);
+        $donateUrl = self::buildContactContextUrl(Civi::settings()->get('wallet_donor_donate_url') ?: Civi::settings()->get('wallet_membership_renew_url'), $contactId);
 
         // Fetch Last 3 Contributions
         $contributions = \Civi\Api4\Contribution::get(FALSE)
@@ -252,17 +265,8 @@ class CRM_Wallet_PassType_Donor
         }
 
         // Profile & Donate URL
-        $profileUrl = Civi::settings()->get('wallet_donor_profile_url') ?: Civi::settings()->get('wallet_membership_profile_url');
-        if ($profileUrl && strpos($profileUrl, 'http') !== 0) {
-            $cs = CRM_Contact_BAO_Contact_Utils::generateChecksum($contactId);
-            $profileUrl = CRM_Utils_System::url($profileUrl, "reset=1&cid={$contactId}&cs={$cs}", true, null, false, true);
-        }
-
-        $donateUrl = Civi::settings()->get('wallet_donor_donate_url') ?: Civi::settings()->get('wallet_membership_renew_url');
-        if ($donateUrl && strpos($donateUrl, 'http') !== 0) {
-            $cs = CRM_Contact_BAO_Contact_Utils::generateChecksum($contactId);
-            $donateUrl = CRM_Utils_System::url($donateUrl, "reset=1&cid={$contactId}&cs={$cs}", true, null, false, true);
-        }
+        $profileUrl = self::buildContactContextUrl(Civi::settings()->get('wallet_donor_profile_url') ?: Civi::settings()->get('wallet_membership_profile_url'), $contactId);
+        $donateUrl = self::buildContactContextUrl(Civi::settings()->get('wallet_donor_donate_url') ?: Civi::settings()->get('wallet_membership_renew_url'), $contactId);
 
         // Generate barcode
         $barcodeToken = Civi::settings()->get('wallet_barcode_donor') ?: '{contact.id}';
