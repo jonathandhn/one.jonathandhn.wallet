@@ -6,32 +6,32 @@
   <h3>{ts}Channel Flags{/ts}</h3>
   <table class="form-layout-compressed">
     <tr class="crm-wallet-channel-apple-form-block-wallet_channel_apple_enabled">
-      <td class="label">{$form.wallet_channel_apple_enabled.label}</td>
-      <td>{$form.wallet_channel_apple_enabled.html}</td>
+      <td class="label">{ts}Apple Wallet{/ts}</td>
+      <td>{$form.wallet_channel_apple_enabled.html} {$form.wallet_channel_apple_enabled.label}</td>
     </tr>
     <tr class="crm-wallet-channel-google-form-block-wallet_channel_google_enabled">
-      <td class="label">{$form.wallet_channel_google_enabled.label}</td>
-      <td>{$form.wallet_channel_google_enabled.html}</td>
+      <td class="label">{ts}Google Wallet{/ts}</td>
+      <td>{$form.wallet_channel_google_enabled.html} {$form.wallet_channel_google_enabled.label}</td>
     </tr>
     <tr class="crm-wallet-channel-qr-form-block-wallet_channel_qr_enabled">
-      <td class="label">{$form.wallet_channel_qr_enabled.label}</td>
-      <td>{$form.wallet_channel_qr_enabled.html}</td>
+      <td class="label">{ts}Local QR{/ts}</td>
+      <td>{$form.wallet_channel_qr_enabled.html} {$form.wallet_channel_qr_enabled.label}</td>
     </tr>
   </table>
 
   <h3>{ts}Pass Type Flags{/ts}</h3>
   <table class="form-layout-compressed">
     <tr class="crm-wallet-type-participant-form-block-wallet_type_participant_enabled">
-      <td class="label">{$form.wallet_type_participant_enabled.label}</td>
-      <td>{$form.wallet_type_participant_enabled.html}</td>
+      <td class="label">{ts}Event Tickets{/ts}</td>
+      <td>{$form.wallet_type_participant_enabled.html} {$form.wallet_type_participant_enabled.label}</td>
     </tr>
     <tr class="crm-wallet-type-membership-form-block-wallet_type_membership_enabled">
-      <td class="label">{$form.wallet_type_membership_enabled.label}</td>
-      <td>{$form.wallet_type_membership_enabled.html}</td>
+      <td class="label">{ts}Membership Cards{/ts}</td>
+      <td>{$form.wallet_type_membership_enabled.html} {$form.wallet_type_membership_enabled.label}</td>
     </tr>
     <tr class="crm-wallet-type-donor-form-block-wallet_type_donor_enabled">
-      <td class="label">{$form.wallet_type_donor_enabled.label}</td>
-      <td>{$form.wallet_type_donor_enabled.html}</td>
+      <td class="label">{ts}Donor Cards{/ts}</td>
+      <td>{$form.wallet_type_donor_enabled.html} {$form.wallet_type_donor_enabled.label}</td>
     </tr>
   </table>
 
