@@ -268,6 +268,12 @@ class CRM_Wallet_PassType_Donor
             'id' => $objectId,
             'classId' => $classId,
             'state' => 'ACTIVE',
+            'cardTitle' => [
+                'defaultValue' => [
+                    'language' => 'fr-FR',
+                    'value' => E::ts('Carte Donateur'),
+                ],
+            ],
             'barcode' => [
                 'type' => 'QR_CODE',
                 'value' => $barcodeValue,
