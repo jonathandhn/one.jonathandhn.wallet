@@ -308,6 +308,9 @@ function civi_wallet_civicrm_tokenValues(&$values, $cids, $job = null, $tokens =
             }
             if (civi_wallet_is_context_enabled('membership') && civi_wallet_is_channel_enabled('google')) {
                 $membershipGoogleUrl = CRM_Utils_System::url('civicrm/wallet/pass', "cid={$cid}&cs={$cs}&type=google&context=membership", true, null, false, true);
+                if ($htmlMembership !== '') {
+                    $htmlMembership .= ' ';
+                }
                 $htmlMembership .= "<a href='{$membershipGoogleUrl}' style='{$btnStyleGoogle}'>" . E::ts('Ajouter à Google Wallet') . "</a>";
             }
 
@@ -324,6 +327,9 @@ function civi_wallet_civicrm_tokenValues(&$values, $cids, $job = null, $tokens =
             }
             if (civi_wallet_is_context_enabled('participant') && civi_wallet_is_channel_enabled('google')) {
                 $participantGoogleUrl = CRM_Utils_System::url('civicrm/wallet/pass', "cid={$cid}&cs={$cs}&type=google&context=participant", true, null, false, true);
+                if ($htmlParticipant !== '') {
+                    $htmlParticipant .= ' ';
+                }
                 $htmlParticipant .= "<a href='{$participantGoogleUrl}' style='{$btnStyleGoogle}'>" . E::ts('Ajouter à Google Wallet') . "</a>";
             }
 
@@ -340,6 +346,9 @@ function civi_wallet_civicrm_tokenValues(&$values, $cids, $job = null, $tokens =
             }
             if (civi_wallet_is_context_enabled('donor') && civi_wallet_is_channel_enabled('google')) {
                 $donorGoogleUrl = CRM_Utils_System::url('civicrm/wallet/pass', "cid={$cid}&cs={$cs}&type=google&context=donor", true, null, false, true);
+                if ($htmlDonor !== '') {
+                    $htmlDonor .= ' ';
+                }
                 $htmlDonor .= "<a href='{$donorGoogleUrl}' style='{$btnStyleGoogle}'>" . E::ts('Ajouter à Google Wallet') . "</a>";
             }
 
