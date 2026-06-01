@@ -86,9 +86,32 @@ The extension adds a "Wallet Settings" custom group to Events.
 
 ### Participant Workflow
 
-- Participants receive a download link or QR Code in their email confirmation by inserting the following tokens in Message Templates:
-  - `{contact.wallet_links}` / `{participant.wallet_links}` / `{contact.wallet_links_donor}`: Outputs HTML buttons ("Ajouter à Apple Wallet", etc.)
-  - `{contact.qr_membership}` / `{participant.qr_participant}` / `{contact.qr_donor}`: Outputs a native 150x150 QR code image (`<img>` tag) for printing or scanning.
+- Participants receive a download link or QR Code in their email confirmation by inserting the following tokens in Message Templates.
+
+HTML composite tokens:
+- `{contact.wallet_links}`: Membership Apple/Google buttons as HTML.
+- `{participant.wallet_links}`: Event ticket Apple/Google buttons as HTML.
+- `{contact.wallet_links_donor}`: Donor card Apple/Google buttons as HTML.
+- `{contact.qr_membership}`: Membership QR code as an HTML `<img>` tag.
+- `{participant.qr_participant}`: Event ticket QR code as an HTML `<img>` tag.
+- `{contact.qr_donor}`: Donor QR code as an HTML `<img>` tag.
+
+Raw membership tokens:
+- `{contact.wallet_apple_membership_url}`: Apple Wallet URL for a membership card.
+- `{contact.wallet_google_membership_url}`: Google Wallet URL for a membership card.
+- `{contact.qr_membership_url}`: Raw QR image URL for a membership card.
+
+Raw donor tokens:
+- `{contact.wallet_apple_donor_url}`: Apple Wallet URL for a donor card.
+- `{contact.wallet_google_donor_url}`: Google Wallet URL for a donor card.
+- `{contact.qr_donor_url}`: Raw QR image URL for a donor card.
+
+Raw participant tokens:
+- `{participant.wallet_apple_url}`: Apple Wallet URL for an event ticket.
+- `{participant.wallet_google_url}`: Google Wallet URL for an event ticket.
+- `{participant.qr_participant_url}`: Raw QR image URL for an event ticket.
+
+- The raw URL tokens are intended for custom MJML/HTML templates where you want to place Apple, Google, or QR assets independently.
 - Scanning the QR Code on the pass allows check-in. The recommended app is **[Civi Scan Webapp](https://github.com/jonathandhn/one.jonathandhn.scan)**, or standard QR lookup.
 
 ### Donor Cards
