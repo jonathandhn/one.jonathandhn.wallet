@@ -2,6 +2,19 @@
 
 class CRM_Wallet_Page_Pass extends CRM_Core_Page
 {
+    private function resolveParticipantIdFromContact($contactId)
+    {
+        $participant = \Civi\Api4\Participant::get(FALSE)
+            ->addSelect('id')
+            ->addWhere('contact_id', '=', $contactId)
+            ->addOrderBy('id', 'DESC')
+            ->setLimit(1)
+            ->execute()
+            ->first();
+
+        return $participant['id'] ?? null;
+    }
+
     public function run()
     {
         $participantId = CRM_Utils_Request::retrieve('pid', 'Integer');
@@ -13,6 +26,13 @@ class CRM_Wallet_Page_Pass extends CRM_Core_Page
 
         if (!$participantId && !$contactId) {
             CRM_Utils_System::permissionDenied();
+        }
+
+        if (!$participantId && $contactId && $context === 'participant') {
+            $participantId = $this->resolveParticipantIdFromContact($contactId);
+            if (!$participantId) {
+                CRM_Utils_System::permissionDenied();
+            }
         }
 
         $entityTable = $participantId ? 'civicrm_participant' : ($context === 'donor' ? 'civicrm_donor' : 'civicrm_contact');
@@ -58,10 +78,9 @@ class CRM_Wallet_Page_Pass extends CRM_Core_Page
                 CRM_Utils_System::redirect($url);
             }
         } catch (Throwable $e) {
-            // Debug: Print error directly
-            echo "Error: " . $e->getMessage();
-            echo "<br>Trace: <pre>" . $e->getTraceAsString() . "</pre>";
             CRM_Core_Error::debug_log_message("Wallet Error: " . $e->getMessage());
+            CRM_Core_Session::setStatus(ts('Unable to generate the requested wallet pass.'), ts('Wallet Error'), 'error');
+            CRM_Utils_System::permissionDenied();
             return;
         }
 

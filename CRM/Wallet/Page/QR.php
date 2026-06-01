@@ -6,6 +6,17 @@ use chillerlan\QRCode\Data\QRMatrix;
 
 class CRM_Wallet_Page_QR extends CRM_Core_Page
 {
+    private function resolveParticipantByContact($contactId)
+    {
+        return \Civi\Api4\Participant::get(FALSE)
+            ->addSelect('id', 'contact_id')
+            ->addWhere('contact_id', '=', $contactId)
+            ->addOrderBy('id', 'DESC')
+            ->setLimit(1)
+            ->execute()
+            ->first();
+    }
+
     public function run()
     {
         $entityId = CRM_Utils_Request::retrieve('id', 'Integer', CRM_Core_DAO::$_nullObject, FALSE);
@@ -21,13 +32,20 @@ class CRM_Wallet_Page_QR extends CRM_Core_Page
 
         // Determine Contact ID and Entity ID
         if ($entity === 'participant') {
-            if (!$entityId) CRM_Utils_System::permissionDenied();
-            $participant = \Civi\Api4\Participant::get(FALSE)
-                ->addWhere('id', '=', $entityId)
-                ->execute()->first();
+            if ($entityId) {
+                $participant = \Civi\Api4\Participant::get(FALSE)
+                    ->addWhere('id', '=', $entityId)
+                    ->execute()
+                    ->first();
+            } elseif ($contactId) {
+                $participant = $this->resolveParticipantByContact($contactId);
+            } else {
+                CRM_Utils_System::permissionDenied();
+            }
             if (!$participant) {
                 CRM_Utils_System::permissionDenied();
             }
+            $entityId = $participant['id'];
             $contactId = $participant['contact_id'];
         } elseif ($entity === 'membership') {
             if ($entityId) {

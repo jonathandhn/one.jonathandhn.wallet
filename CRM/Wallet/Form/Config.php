@@ -26,6 +26,7 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting
         'wallet_membership_profile_url' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
         'wallet_barcode_membership' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
         'wallet_barcode_participant' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
+        'wallet_barcode_donor' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
     ];
 
     public function buildQuickForm()

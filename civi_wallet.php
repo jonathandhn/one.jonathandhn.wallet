@@ -262,8 +262,7 @@ function civi_wallet_civicrm_tokenValues(&$values, $cids, $job = null, $tokens =
             $values[$cid]['qr_membership'] = "<img src='{$qrUrl}' width='150' height='150' alt='" . E::ts('QR Code') . "'>"; // support alias
 
             $color = ltrim(Civi::settings()->get('wallet_color_foreground') ?: '000000', '#');
-            $base = rtrim(CRM_Utils_System::baseCMSURL(), '/');
-            $qrUrl = $base . "/civicrm/wallet/api/qr?entity=participant&id={participant.id}&cs={$cs}&color={$color}";
+            $qrUrl = CRM_Utils_System::url('civicrm/wallet/api/qr', "entity=participant&cid={$cid}&cs={$cs}&color={$color}", true, null, false, true);
             $values[$cid]['participant.qr_participant'] = "<img src='{$qrUrl}' width='150' height='150' alt='" . E::ts('QR Code') . "'>";
             $values[$cid]['qr_participant'] = "<img src='{$qrUrl}' width='150' height='150' alt='" . E::ts('QR Code') . "'>"; // support alias
 
