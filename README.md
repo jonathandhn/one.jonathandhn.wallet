@@ -118,6 +118,47 @@ Raw participant tokens:
 You can generate a pure Donor card for any Contact using the `{contact.wallet_links_donor}` token. 
 This card is independent of memberships. By default, it automatically fetches and displays the last 3 completed Contributions (Donations) on the back of the Apple Pass or as text modules on the Google Pass, along with quick links to update their profile or make a new donation.
 
+## Maintenance
+
+### Force a pass update
+
+You can enqueue a manual refresh with `cv ev`:
+
+```bash
+# Refresh all passes linked to an Event
+cv ev 'CRM_Wallet_BAO_Pass::updatePasses("Event", 123);'
+
+# Refresh one event ticket
+cv ev 'CRM_Wallet_BAO_Pass::updatePasses("Participant", 456);'
+
+# Refresh one membership card
+cv ev 'CRM_Wallet_BAO_Pass::updatePasses("Membership", 789);'
+
+# Refresh one donor card (contact id)
+cv ev 'CRM_Wallet_BAO_Pass::updatePasses("Donor", 321);'
+
+# Refresh one contact-based card
+cv ev 'CRM_Wallet_BAO_Pass::updatePasses("Contact", 321);'
+```
+
+These commands enqueue work in the SQL queue `one.jonathandhn.wallet.updates`.
+
+### Process pending pass updates
+
+The queue is normally processed by cron. Each run processes up to `50` items.
+
+You can force one run manually with:
+
+```bash
+cv ev 'civi_wallet_civicrm_cron(NULL);'
+```
+
+You can inspect the number of pending items with:
+
+```bash
+cv ev '$q = CRM_Queue_Service::singleton()->create(["type" => "Sql", "name" => "one.jonathandhn.wallet.updates", "runner" => "task"]); return $q->numberOfItems();' --out=shell
+```
+
 ## Developer API (Hooks)
 
 You can customize the QR Code content dynamically (for example, to inject a cryptographic signature, JSON Web Token (JWT), or HMAC) without forking the extension.
