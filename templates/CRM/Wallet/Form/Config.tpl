@@ -115,6 +115,28 @@
     </tr>
   </table>
 
+  <h3>{ts}Donor Settings{/ts}</h3>
+  <table class="form-layout-compressed">
+    <tr class="crm-wallet-donor-donate-url-form-block-wallet_donor_donate_url">
+      <td class="label">{$form.wallet_donor_donate_url.label}</td>
+      <td>
+        {$form.wallet_donor_donate_url.html}
+        <div class="description">{ts}Example: civicrm/contribute/transact?reset=1&id=1{/ts}</div>
+      </td>
+    </tr>
+    <tr class="crm-wallet-donor-profile-url-form-block-wallet_donor_profile_url">
+      <td class="label">{$form.wallet_donor_profile_url.label}</td>
+      <td>
+        {$form.wallet_donor_profile_url.html}
+        <div class="description">{ts}Example: civicrm/profile/edit?reset=1&gid=1{/ts}</div>
+      </td>
+    </tr>
+    <tr class="crm-wallet-barcode-donor-form-block-wallet_barcode_donor">
+      <td class="label">{$form.wallet_barcode_donor.label}</td>
+      <td>{$form.wallet_barcode_donor.html}</td>
+    </tr>
+  </table>
+
   <div class="crm-submit-buttons">
     {include file="CRM/common/formButtons.tpl" location="bottom"}
   </div>

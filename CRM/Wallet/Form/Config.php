@@ -24,6 +24,8 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting
         'wallet_color_membership_expired' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
         'wallet_membership_renew_url' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
         'wallet_membership_profile_url' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
+        'wallet_donor_donate_url' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
+        'wallet_donor_profile_url' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
         'wallet_barcode_membership' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
         'wallet_barcode_participant' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
         'wallet_barcode_donor' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
@@ -95,6 +97,8 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting
         $this->add('text', 'wallet_barcode_participant', E::ts('Event Ticket Barcode Content (Tokens allowed)'), ['size' => 50, 'placeholder' => '{participant.id}']);
 
         // --- Donor Settings ---
+        $this->add('text', 'wallet_donor_donate_url', E::ts('Donor Donate URL'), ['size' => 50, 'placeholder' => 'civicrm/contribute/transact?reset=1&id=1']);
+        $this->add('text', 'wallet_donor_profile_url', E::ts('Donor Profile Update URL'), ['size' => 50, 'placeholder' => 'civicrm/profile/edit?reset=1&gid=1']);
         $this->add('text', 'wallet_barcode_donor', E::ts('Donor Card Barcode Content (Tokens allowed)'), ['size' => 50, 'placeholder' => '{contact.id}']);
 
         parent::buildQuickForm();
@@ -161,6 +165,8 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting
             'wallet_color_membership_expired',
             'wallet_membership_renew_url',
             'wallet_membership_profile_url',
+            'wallet_donor_donate_url',
+            'wallet_donor_profile_url',
             'wallet_barcode_membership',
             'wallet_barcode_participant',
             'wallet_barcode_donor',
