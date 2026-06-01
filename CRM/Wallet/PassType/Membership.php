@@ -77,7 +77,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
 
         $entityType = 'Membership';
         $empty = null;
-        CRM_Utils_Hook::singleton()->invoke(3, $barcodeValue, $entityType, $membershipId, $empty, $empty, $empty, 'civicrm_wallet_barcode_alter');
+        CRM_Utils_Hook::singleton()->invoke(['barcodeValue', 'entityType', 'entityId'], $barcodeValue, $entityType, $membershipId, $empty, $empty, $empty, 'civicrm_wallet_barcode_alter');
         
         $qrCodeContent = (string) $barcodeValue;
         $qrCodeAltText = is_numeric($qrCodeContent) ? $qrCodeContent : '';
@@ -167,7 +167,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
         $platform = 'apple';
         $entityType = 'Membership';
         $empty = null;
-        CRM_Utils_Hook::singleton()->invoke(5, $passData, $entityType, $membershipId, $platform, $empty, $empty, 'civicrm_wallet_pass_alter');
+        CRM_Utils_Hook::singleton()->invoke(['passData', 'entityType', 'entityId', 'platform'], $passData, $entityType, $membershipId, $platform, $empty, $empty, 'civicrm_wallet_pass_alter');
 
         // Add Images
         $extPath = CRM_Extension_System::singleton()->getMapper()->keyToBasePath('one.jonathandhn.wallet');
@@ -236,7 +236,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
 
         $entityType = 'Membership';
         $empty = null;
-        CRM_Utils_Hook::singleton()->invoke(3, $barcodeValue, $entityType, $membershipId, $empty, $empty, $empty, 'civicrm_wallet_barcode_alter');
+        CRM_Utils_Hook::singleton()->invoke(['barcodeValue', 'entityType', 'entityId'], $barcodeValue, $entityType, $membershipId, $empty, $empty, $empty, 'civicrm_wallet_barcode_alter');
         
         $qrCodeContent = (string) $barcodeValue;
         $qrCodeAltText = is_numeric($qrCodeContent) ? $qrCodeContent : '';
@@ -364,7 +364,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
         $platform = 'google';
         $entityType = 'Membership';
         $empty = null;
-        CRM_Utils_Hook::singleton()->invoke(5, $objectMetadata, $entityType, $membershipId, $platform, $empty, $empty, 'civicrm_wallet_pass_alter');
+        CRM_Utils_Hook::singleton()->invoke(['passData', 'entityType', 'entityId', 'platform'], $objectMetadata, $entityType, $membershipId, $platform, $empty, $empty, 'civicrm_wallet_pass_alter');
 
         $objectObj = new \Google\Service\Walletobjects\LoyaltyObject($objectMetadata);
 

@@ -126,7 +126,7 @@ class CRM_Wallet_Page_QR extends CRM_Core_Page
         }
 
         $empty = null;
-        CRM_Utils_Hook::singleton()->invoke(3, $barcodeValue, $entityType, $entityId, $empty, $empty, $empty, 'civicrm_wallet_barcode_alter');
+        CRM_Utils_Hook::singleton()->invoke(['barcodeValue', 'entityType', 'entityId'], $barcodeValue, $entityType, $entityId, $empty, $empty, $empty, 'civicrm_wallet_barcode_alter');
 
         if (empty($barcodeValue)) {
             CRM_Utils_System::civiExit();

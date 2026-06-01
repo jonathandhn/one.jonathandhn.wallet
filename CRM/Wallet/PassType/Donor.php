@@ -68,7 +68,8 @@ class CRM_Wallet_PassType_Donor
         }
 
         $empty = null;
-        CRM_Utils_Hook::singleton()->invoke(3, $barcodeValue, 'Contact', $contactId, $empty, $empty, $empty, 'civicrm_wallet_barcode_alter');
+        $barcodeEntityType = 'Contact';
+        CRM_Utils_Hook::singleton()->invoke(['barcodeValue', 'entityType', 'entityId'], $barcodeValue, $barcodeEntityType, $contactId, $empty, $empty, $empty, 'civicrm_wallet_barcode_alter');
         
         $qrCodeContent = $barcodeValue;
         $qrCodeAltText = is_numeric($qrCodeContent) ? $qrCodeContent : '';
@@ -138,7 +139,7 @@ class CRM_Wallet_PassType_Donor
 
         $platform = 'apple';
         $entityType = 'Donor';
-        CRM_Utils_Hook::singleton()->invoke(5, $passData, $entityType, $contactId, $platform, $empty, $empty, 'civicrm_wallet_pass_alter');
+        CRM_Utils_Hook::singleton()->invoke(['passData', 'entityType', 'entityId', 'platform'], $passData, $entityType, $contactId, $platform, $empty, $empty, 'civicrm_wallet_pass_alter');
 
         // Add Images
         $extPath = CRM_Extension_System::singleton()->getMapper()->keyToBasePath('one.jonathandhn.wallet');
@@ -260,7 +261,8 @@ class CRM_Wallet_PassType_Donor
         }
 
         $empty = null;
-        CRM_Utils_Hook::singleton()->invoke(3, $barcodeValue, 'Contact', $contactId, $empty, $empty, $empty, 'civicrm_wallet_barcode_alter');
+        $barcodeEntityType = 'Contact';
+        CRM_Utils_Hook::singleton()->invoke(['barcodeValue', 'entityType', 'entityId'], $barcodeValue, $barcodeEntityType, $contactId, $empty, $empty, $empty, 'civicrm_wallet_barcode_alter');
 
         $objectMetadata = [
             'id' => $objectId,
@@ -318,7 +320,7 @@ class CRM_Wallet_PassType_Donor
 
         $platform = 'google';
         $entityType = 'Donor';
-        CRM_Utils_Hook::singleton()->invoke(5, $objectMetadata, $entityType, $contactId, $platform, $empty, $empty, 'civicrm_wallet_pass_alter');
+        CRM_Utils_Hook::singleton()->invoke(['passData', 'entityType', 'entityId', 'platform'], $objectMetadata, $entityType, $contactId, $platform, $empty, $empty, 'civicrm_wallet_pass_alter');
 
         $objectObj = new \Google\Service\Walletobjects\GenericObject($objectMetadata);
 

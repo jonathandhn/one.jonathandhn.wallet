@@ -108,7 +108,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
 
         $entityType = 'Participant';
         $empty = null;
-        CRM_Utils_Hook::singleton()->invoke(3, $barcodeValue, $entityType, $participantId, $empty, $empty, $empty, 'civicrm_wallet_barcode_alter');
+        CRM_Utils_Hook::singleton()->invoke(['barcodeValue', 'entityType', 'entityId'], $barcodeValue, $entityType, $participantId, $empty, $empty, $empty, 'civicrm_wallet_barcode_alter');
         
         $qrCodeContent = (string) $barcodeValue;
         $qrCodeAltText = is_numeric($qrCodeContent) ? $qrCodeContent : '';
@@ -274,7 +274,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
         $platform = 'apple';
         $entityType = 'Participant';
         $empty = null;
-        CRM_Utils_Hook::singleton()->invoke(5, $passData, $entityType, $participantId, $platform, $empty, $empty, 'civicrm_wallet_pass_alter');
+        CRM_Utils_Hook::singleton()->invoke(['passData', 'entityType', 'entityId', 'platform'], $passData, $entityType, $participantId, $platform, $empty, $empty, 'civicrm_wallet_pass_alter');
 
         $pass->setData($passData);
 
@@ -301,7 +301,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
 
         $entityType = 'Participant';
         $empty = null;
-        CRM_Utils_Hook::singleton()->invoke(3, $barcodeValue, $entityType, $participantId, $empty, $empty, $empty, 'civicrm_wallet_barcode_alter');
+        CRM_Utils_Hook::singleton()->invoke(['barcodeValue', 'entityType', 'entityId'], $barcodeValue, $entityType, $participantId, $empty, $empty, $empty, 'civicrm_wallet_barcode_alter');
         
         $qrCodeContent = (string) $barcodeValue;
         $qrCodeAltText = is_numeric($qrCodeContent) ? $qrCodeContent : '';
@@ -580,7 +580,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
         $platform = 'google';
         $entityType = 'Participant';
         $empty = null;
-        CRM_Utils_Hook::singleton()->invoke(5, $objectMetadata, $entityType, $participantId, $platform, $empty, $empty, 'civicrm_wallet_pass_alter');
+        CRM_Utils_Hook::singleton()->invoke(['passData', 'entityType', 'entityId', 'platform'], $objectMetadata, $entityType, $participantId, $platform, $empty, $empty, 'civicrm_wallet_pass_alter');
 
         $objectObj = new \Google\Service\Walletobjects\EventTicketObject($objectMetadata);
 
