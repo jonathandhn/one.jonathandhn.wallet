@@ -2,7 +2,9 @@
 
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
+use chillerlan\QRCode\Common\EccLevel;
 use chillerlan\QRCode\Data\QRMatrix;
+use chillerlan\QRCode\Output\QRGdImagePNG;
 
 class CRM_Wallet_Page_QR extends CRM_Core_Page
 {
@@ -132,11 +134,11 @@ class CRM_Wallet_Page_QR extends CRM_Core_Page
 
         // Generate Image
         $options = new QROptions([
-            'version'      => \chillerlan\QRCode\Common\Version::AUTO,
-            'outputType'   => QRCode::OUTPUT_IMAGE_PNG,
-            'eccLevel'     => QRCode::ECC_M,
-            'scale'        => 10,
-            'imageBase64'  => false,
+            'version'          => \chillerlan\QRCode\Common\Version::AUTO,
+            'outputInterface'  => QRGdImagePNG::class,
+            'eccLevel'         => EccLevel::M,
+            'scale'            => 10,
+            'outputBase64'     => false,
             'imageTransparent' => true,
         ]);
 
