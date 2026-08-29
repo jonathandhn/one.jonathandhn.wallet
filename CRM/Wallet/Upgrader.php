@@ -24,7 +24,6 @@ class CRM_Wallet_Upgrader extends CRM_Extension_Upgrader_Base
     public function install()
     {
         $this->copyApiScript();
-        $this->executeSqlFile('sql/auto_install.sql');
         $this->createCustomFields();
         return TRUE;
     }
@@ -54,113 +53,178 @@ class CRM_Wallet_Upgrader extends CRM_Extension_Upgrader_Base
         return TRUE;
     }
 
-            public function upgrade_1005()
+    public function upgrade_1005()
     {
-        $this->ctx->log->info('Migrating wallet passes from participant_id to entity_id/entity_table');
-        
-        // Helper to safely execute queries
-        $safeQuery = function($sql) {
-            try {
-                CRM_Core_DAO::executeQuery($sql);
-            } catch (Exception $e) {
-                $this->ctx->log->warning("Upgrade 1004 SQL Failed: $sql | Error: " . $e->getMessage());
-            }
-        };
-
-        // Check if entity_table exists
-        $dao = CRM_Core_DAO::executeQuery("SHOW COLUMNS FROM civicrm_wallet_pass LIKE 'entity_table'");
-        if (!$dao->fetch()) {
-            
-            // Try dropping common foreign key names for participant_id
-            $safeQuery("ALTER TABLE civicrm_wallet_pass DROP FOREIGN KEY FK_civicrm_wallet_pass_participant_id");
-            $safeQuery("ALTER TABLE civicrm_wallet_pass DROP FOREIGN KEY civicrm_wallet_pass_ibfk_1");
-            $safeQuery("ALTER TABLE civicrm_wallet_pass DROP FOREIGN KEY FK_participant_id");
-
-            // Add new columns
-            $safeQuery("ALTER TABLE civicrm_wallet_pass ADD COLUMN entity_table VARCHAR(64) NULL AFTER id");
-            $safeQuery("ALTER TABLE civicrm_wallet_pass ADD COLUMN entity_id INT UNSIGNED NULL AFTER entity_table");
-
-            // Check if participant_id exists before migrating data from it
-            $hasParticipantId = CRM_Core_DAO::executeQuery("SHOW COLUMNS FROM civicrm_wallet_pass LIKE 'participant_id'")->fetch();
-            
-            if ($hasParticipantId) {
-                // Migrate data
-                $safeQuery("UPDATE civicrm_wallet_pass SET entity_table = 'civicrm_participant', entity_id = participant_id WHERE participant_id IS NOT NULL");
-            }
-
-            // Cleanup invalid rows
-            $safeQuery("DELETE FROM civicrm_wallet_pass WHERE entity_id IS NULL OR entity_table IS NULL");
-            
-            // Make columns NOT NULL
-            $safeQuery("ALTER TABLE civicrm_wallet_pass MODIFY COLUMN entity_table VARCHAR(64) NOT NULL");
-            $safeQuery("ALTER TABLE civicrm_wallet_pass MODIFY COLUMN entity_id INT UNSIGNED NOT NULL");
-
-            // Drop old column
-            if ($hasParticipantId) {
-                $safeQuery("ALTER TABLE civicrm_wallet_pass DROP COLUMN participant_id");
-            }
-
-            // Update index
-            $safeQuery("ALTER TABLE civicrm_wallet_pass DROP INDEX index_participant_type");
-            $safeQuery("ALTER TABLE civicrm_wallet_pass ADD UNIQUE INDEX index_entity_type (entity_table, entity_id, type)");
-        } else {
-            // Even if entity_table exists, participant_id might still exist if it crashed last time
-            $hasParticipantId = CRM_Core_DAO::executeQuery("SHOW COLUMNS FROM civicrm_wallet_pass LIKE 'participant_id'")->fetch();
-            if ($hasParticipantId) {
-                $safeQuery("ALTER TABLE civicrm_wallet_pass DROP FOREIGN KEY FK_civicrm_wallet_pass_participant_id");
-                $safeQuery("ALTER TABLE civicrm_wallet_pass DROP FOREIGN KEY civicrm_wallet_pass_ibfk_1");
-                $safeQuery("ALTER TABLE civicrm_wallet_pass DROP COLUMN participant_id");
-            }
-            
-            // Try creating the index just in case it failed last time
-            $safeQuery("ALTER TABLE civicrm_wallet_pass DROP INDEX index_participant_type");
-            $safeQuery("ALTER TABLE civicrm_wallet_pass ADD UNIQUE INDEX index_entity_type (entity_table, entity_id, type)");
-        }
-
+        $this->ctx->log->info('Deferring the Wallet pass schema migration to revision 1008');
         return TRUE;
     }
-        public function upgrade_1006()
+
+    public function upgrade_1006()
     {
-        $this->ctx->log->info('Dropping participant_id foreign keys and column dynamically');
-        
-        // Helper to safely execute queries
-        $safeQuery = function($sql) {
-            try {
-                CRM_Core_DAO::executeQuery($sql);
-            } catch (Exception $e) {
-                $this->ctx->log->warning("Upgrade 1006 SQL Failed: $sql | Error: " . $e->getMessage());
-            }
-        };
+        $this->ctx->log->info('Deferring the Wallet pass schema migration to revision 1008');
+        return TRUE;
+    }
 
-        // Find the foreign key name for participant_id dynamically
-        $dao = CRM_Core_DAO::executeQuery("
-            SELECT CONSTRAINT_NAME 
-            FROM information_schema.KEY_COLUMN_USAGE 
-            WHERE TABLE_SCHEMA = DATABASE() 
-              AND TABLE_NAME = 'civicrm_wallet_pass' 
-              AND COLUMN_NAME = 'participant_id' 
-              AND REFERENCED_TABLE_NAME IS NOT NULL
-        ");
+    public function upgrade_1007()
+    {
+        $this->ctx->log->info('Moving Wallet Settings event overrides out of the inline Event Settings form');
+        $this->createCustomFields();
+        return TRUE;
+    }
 
-        while ($dao->fetch()) {
-            $fkName = $dao->CONSTRAINT_NAME;
-            $this->ctx->log->info("Found foreign key: $fkName. Dropping it...");
-            $safeQuery("ALTER TABLE civicrm_wallet_pass DROP FOREIGN KEY `$fkName`");
+    /**
+     * Finish the participant_id to dynamic entity reference migration.
+     *
+     * Earlier upgrade steps swallowed SQL errors and could be marked complete
+     * while leaving the legacy schema in place. This step is deliberately
+     * idempotent and never deletes pass records.
+     */
+    public function upgrade_1008()
+    {
+        $this->ctx->log->info('Ensuring Wallet passes use entity_table and entity_id');
+
+        if (!CRM_Core_DAO::checkTableExists('civicrm_wallet_pass')) {
+            throw new CRM_Core_Exception('Cannot migrate CiviWallet: civicrm_wallet_pass does not exist.');
         }
 
-        // Now drop the column
-        $hasParticipantId = CRM_Core_DAO::executeQuery("SHOW COLUMNS FROM civicrm_wallet_pass LIKE 'participant_id'")->fetch();
+        $hasParticipantId = $this->walletPassColumnExists('participant_id');
+        $hasEntityTable = $this->walletPassColumnExists('entity_table');
+        $hasEntityId = $this->walletPassColumnExists('entity_id');
+
         if ($hasParticipantId) {
-            $safeQuery("ALTER TABLE civicrm_wallet_pass MODIFY participant_id INT UNSIGNED NULL"); // Make it nullable just in case drop fails again
-            $safeQuery("ALTER TABLE civicrm_wallet_pass DROP COLUMN participant_id");
+            if (!$hasEntityTable) {
+                CRM_Core_DAO::executeQuery(
+                    'ALTER TABLE civicrm_wallet_pass ADD COLUMN entity_table VARCHAR(64) NULL AFTER id'
+                );
+                $hasEntityTable = TRUE;
+            }
+            if (!$hasEntityId) {
+                CRM_Core_DAO::executeQuery(
+                    'ALTER TABLE civicrm_wallet_pass ADD COLUMN entity_id INT UNSIGNED NULL AFTER entity_table'
+                );
+                $hasEntityId = TRUE;
+            }
+
+            $conflictingRows = (int) CRM_Core_DAO::singleValueQuery("
+                SELECT COUNT(*)
+                FROM civicrm_wallet_pass
+                WHERE (entity_table IS NOT NULL AND entity_table <> 'civicrm_participant')
+                   OR (entity_id IS NOT NULL AND entity_id <> participant_id)
+            ");
+            if ($conflictingRows > 0) {
+                throw new CRM_Core_Exception(
+                    "Cannot migrate CiviWallet: {$conflictingRows} pass row(s) conflict with participant_id."
+                );
+            }
+
+            CRM_Core_DAO::executeQuery("
+                UPDATE civicrm_wallet_pass
+                SET entity_table = COALESCE(entity_table, 'civicrm_participant'),
+                    entity_id = COALESCE(entity_id, participant_id)
+            ");
         }
 
-        // Just in case, ensure the new index exists
-        $safeQuery("ALTER TABLE civicrm_wallet_pass DROP INDEX index_participant_type");
-        $safeQuery("ALTER TABLE civicrm_wallet_pass ADD UNIQUE INDEX index_entity_type (entity_table, entity_id, type)");
+        if (!$hasEntityTable || !$hasEntityId) {
+            throw new CRM_Core_Exception(
+                'Cannot migrate CiviWallet: neither the legacy nor the current Wallet pass schema is complete.'
+            );
+        }
+
+        $incompleteRows = (int) CRM_Core_DAO::singleValueQuery("
+            SELECT COUNT(*)
+            FROM civicrm_wallet_pass
+            WHERE entity_table IS NULL OR entity_id IS NULL
+        ");
+        if ($incompleteRows > 0) {
+            throw new CRM_Core_Exception(
+                "Cannot migrate CiviWallet: {$incompleteRows} pass row(s) have no target entity."
+            );
+        }
+
+        $duplicateGroups = (int) CRM_Core_DAO::singleValueQuery("
+            SELECT COUNT(*)
+            FROM (
+                SELECT entity_table, entity_id, type
+                FROM civicrm_wallet_pass
+                GROUP BY entity_table, entity_id, type
+                HAVING COUNT(*) > 1
+            ) duplicate_wallet_passes
+        ");
+        if ($duplicateGroups > 0) {
+            throw new CRM_Core_Exception(
+                "Cannot migrate CiviWallet: {$duplicateGroups} duplicate entity/type group(s) require review."
+            );
+        }
+
+        CRM_Core_DAO::executeQuery(
+            'ALTER TABLE civicrm_wallet_pass MODIFY COLUMN entity_table VARCHAR(64) NOT NULL'
+        );
+        CRM_Core_DAO::executeQuery(
+            'ALTER TABLE civicrm_wallet_pass MODIFY COLUMN entity_id INT UNSIGNED NOT NULL'
+        );
+
+        if ($hasParticipantId) {
+            $foreignKeys = CRM_Core_DAO::executeQuery("
+                SELECT CONSTRAINT_NAME
+                FROM information_schema.KEY_COLUMN_USAGE
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = 'civicrm_wallet_pass'
+                  AND COLUMN_NAME = 'participant_id'
+                  AND REFERENCED_TABLE_NAME IS NOT NULL
+            ");
+            while ($foreignKeys->fetch()) {
+                $constraintName = str_replace('`', '``', $foreignKeys->CONSTRAINT_NAME);
+                CRM_Core_DAO::executeQuery(
+                    "ALTER TABLE civicrm_wallet_pass DROP FOREIGN KEY `{$constraintName}`"
+                );
+            }
+
+            if ($this->walletPassIndexExists('index_participant_type')) {
+                CRM_Core_DAO::executeQuery(
+                    'ALTER TABLE civicrm_wallet_pass DROP INDEX index_participant_type'
+                );
+            }
+            CRM_Core_DAO::executeQuery(
+                'ALTER TABLE civicrm_wallet_pass DROP COLUMN participant_id'
+            );
+        }
+
+        if (!$this->walletPassIndexExists('index_entity_type')) {
+            CRM_Core_DAO::executeQuery("
+                ALTER TABLE civicrm_wallet_pass
+                ADD UNIQUE INDEX index_entity_type (entity_table, entity_id, type)
+            ");
+        }
 
         return TRUE;
     }
+
+    private function walletPassColumnExists($columnName)
+    {
+        return (bool) CRM_Core_DAO::singleValueQuery("
+            SELECT COUNT(*)
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'civicrm_wallet_pass'
+              AND COLUMN_NAME = %1
+        ", [
+            1 => [$columnName, 'String'],
+        ]);
+    }
+
+    private function walletPassIndexExists($indexName)
+    {
+        return (bool) CRM_Core_DAO::singleValueQuery("
+            SELECT COUNT(*)
+            FROM information_schema.STATISTICS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'civicrm_wallet_pass'
+              AND INDEX_NAME = %1
+        ", [
+            1 => [$indexName, 'String'],
+        ]);
+    }
+
     private function createCustomFields()
     {
         try {
@@ -173,10 +237,16 @@ class CRM_Wallet_Upgrader extends CRM_Extension_Upgrader_Base
                     ->addValue('name', 'Wallet_Settings')
                     ->addValue('title', 'Wallet Settings')
                     ->addValue('extends', 'Event')
-                    ->addValue('style', 'Inline')
+                    ->addValue('style', 'Tab')
                     ->addValue('is_active', 1)
                     ->addValue('is_public', 0)
                     ->execute()->first();
+            }
+            elseif (($group['style'] ?? NULL) !== 'Tab') {
+                \Civi\Api4\CustomGroup::update(FALSE)
+                    ->addWhere('id', '=', $group['id'])
+                    ->addValue('style', 'Tab')
+                    ->execute();
             }
 
             $imageField = \Civi\Api4\CustomField::get(FALSE)

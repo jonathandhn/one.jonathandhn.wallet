@@ -14,12 +14,11 @@
     <url desc="Support">https://github.com/jonathandhn/one.jonathandhn.wallet/issues</url>
     <url desc="Licensing">http://www.gnu.org/licenses/agpl-3.0.html</url>
   </urls>
-  <releaseDate>2026-06-01</releaseDate>
-  <version>1.4</version>
+  <releaseDate>2026-06-29</releaseDate>
+  <version>1.5</version>
   <develStage>alpha</develStage>
   <compatibility>
-    <ver>5.51</ver>
-    <ver>6.0</ver>
+    <ver>6.16</ver>
   </compatibility>
   <smarty_compatibility>
     <ver>3</ver>
@@ -27,7 +26,6 @@
     <ver>5</ver>
   </smarty_compatibility>
   <php_compatibility>
-    <ver>8.1</ver>
     <ver>8.2</ver>
     <ver>8.3</ver>
     <ver>8.4</ver>
@@ -47,6 +45,7 @@
     <mixin>menu-xml@1.0.0</mixin>
     <mixin>mgd-php@1.0.0</mixin>
     <mixin>scan-classes@1.0.0</mixin>
+    <mixin>entity-types-php@2.0.0</mixin>
   </mixins>
   <upgrader>CiviMix\Schema\CiviWallet\AutomaticUpgrader</upgrader>
 </extension>
