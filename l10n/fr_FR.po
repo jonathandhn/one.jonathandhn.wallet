@@ -1,0 +1,39 @@
+# Translation file
+
+msgid ""
+msgstr ""
+"Project-Id-Version: one.jonathandhn.wallet\n"
+"PO-Revision-Date: 2026-06-29 13:20+0000\n"
+"Last-Translator: Jonathan Dahan <jonathan@dhn.one>\n"
+"Language-Team: fr_FR\n"
+"Language: fr_FR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Wallet"
+msgstr "Wallet"
+
+msgid "CiviWallet Settings"
+msgstr "Paramètres CiviWallet"
+
+msgid "Wallet Settings"
+msgstr "Paramètres Wallet"
+
+msgid "Override the default wallet visuals for this event only. Leave these fields empty to keep the global branding configured in CiviWallet settings."
+msgstr "Remplace les visuels Wallet par défaut pour cet événement uniquement. Laissez ces champs vides pour conserver l'identité visuelle globale configurée dans les paramètres CiviWallet."
+
+msgid "Hex color override for the event pass, for example #ea148c."
+msgstr "Surcharge de la couleur hexadécimale du billet de l'événement, par exemple #ea148c."
+
+msgid "Optional event image override used on participant wallet passes. Recommended strip/hero artwork with a wide format."
+msgstr "Surcharge optionnelle de l'image de l'événement utilisée sur les passes wallet des participants. Un visuel de type bannière, au format large, est recommandé."
+
+msgid "Current file: %1"
+msgstr "Fichier actuel : %1"
+
+msgid "Add to Apple Wallet"
+msgstr "Ajouter à Apple Wallet"
+
+msgid "Add to Google Wallet"
+msgstr "Ajouter à Google Wallet"
