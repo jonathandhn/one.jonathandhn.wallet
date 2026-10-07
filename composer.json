@@ -9,9 +9,13 @@
         }
     ],
     "require": {
+        "php": ">=8.2",
         "pkpass/pkpass": "^2.0",
         "google/apiclient": "^2.0",
         "chillerlan/php-qrcode": "^6.0"
+    },
+    "require-dev": {
+        "humbug/php-scoper": "^0.18 || ^0.17"
     },
     "autoload": {
         "psr-4": {
