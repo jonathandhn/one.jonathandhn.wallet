@@ -1,8 +1,70 @@
 <?php
 
 require_once 'civi_wallet.civix.php';
+
+function civi_wallet_register_prefixed_vendor_autoloader($baseDir)
+{
+    static $registered = false;
+
+    if ($registered) {
+        return;
+    }
+
+    $registered = true;
+
+    $prefixes = [
+        'Civi\\Wallet\\Vendor\\Composer\\Autoload\\' => [$baseDir . '/vendor/composer'],
+        'Civi\\Wallet\\Vendor\\chillerlan\\Settings\\' => [$baseDir . '/vendor/chillerlan/php-settings-container/src'],
+        'Civi\\Wallet\\Vendor\\chillerlan\\QRCode\\' => [$baseDir . '/vendor/chillerlan/php-qrcode/src'],
+        'Civi\\Wallet\\Vendor\\Psr\\Log\\' => [$baseDir . '/vendor/psr/log/src'],
+        'Civi\\Wallet\\Vendor\\Psr\\Http\\Message\\' => [
+            $baseDir . '/vendor/psr/http-factory/src',
+            $baseDir . '/vendor/psr/http-message/src',
+        ],
+        'Civi\\Wallet\\Vendor\\Psr\\Http\\Client\\' => [$baseDir . '/vendor/psr/http-client/src'],
+        'Civi\\Wallet\\Vendor\\Psr\\Cache\\' => [$baseDir . '/vendor/psr/cache/src'],
+        'Civi\\Wallet\\Vendor\\Monolog\\' => [$baseDir . '/vendor/monolog/monolog/src/Monolog'],
+        'Civi\\Wallet\\Vendor\\GuzzleHttp\\Psr7\\' => [$baseDir . '/vendor/guzzlehttp/psr7/src'],
+        'Civi\\Wallet\\Vendor\\GuzzleHttp\\Promise\\' => [$baseDir . '/vendor/guzzlehttp/promises/src'],
+        'Civi\\Wallet\\Vendor\\GuzzleHttp\\' => [$baseDir . '/vendor/guzzlehttp/guzzle/src'],
+        'Civi\\Wallet\\Vendor\\Google\\Service\\' => [$baseDir . '/vendor/google/apiclient-services/src'],
+        'Civi\\Wallet\\Vendor\\Google\\Auth\\' => [$baseDir . '/vendor/google/auth/src'],
+        'Civi\\Wallet\\Vendor\\Google\\' => [$baseDir . '/vendor/google/apiclient/src'],
+        'Civi\\Wallet\\Vendor\\Firebase\\JWT\\' => [$baseDir . '/vendor/firebase/php-jwt/src'],
+        'Civi\\Wallet\\Vendor\\PKPass\\' => [$baseDir . '/vendor/pkpass/pkpass/src'],
+        'Civi\\Wallet\\Vendor\\Symfony\\Polyfill\\Php80\\' => [$baseDir . '/vendor/symfony/polyfill-php80'],
+        'Civi\\Wallet\\Vendor\\Symfony\\Contracts\\Service\\' => [$baseDir . '/vendor/symfony/service-contracts'],
+        'Civi\\Wallet\\Vendor\\Symfony\\Contracts\\EventDispatcher\\' => [$baseDir . '/vendor/symfony/event-dispatcher-contracts'],
+    ];
+
+    spl_autoload_register(static function ($class) use ($prefixes) {
+        foreach ($prefixes as $prefix => $dirs) {
+            if (strncmp($class, $prefix, strlen($prefix)) !== 0) {
+                continue;
+            }
+
+            $relativePath = str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+
+            foreach ($dirs as $dir) {
+                $file = $dir . '/' . $relativePath;
+                if (file_exists($file)) {
+                    require_once $file;
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }, true, true);
+}
+
+civi_wallet_register_prefixed_vendor_autoloader(__DIR__);
+
 if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     require_once __DIR__ . '/vendor/autoload.php';
+    if (file_exists(__DIR__ . '/vendor/scoper-autoload.php')) {
+        require_once __DIR__ . '/vendor/scoper-autoload.php';
+    }
 }
 use CRM_Wallet_ExtensionUtil as E;
 
