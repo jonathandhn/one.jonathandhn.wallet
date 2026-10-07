@@ -67,14 +67,38 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO
         $tasks = [];
 
         if ($entity == 'Event') {
-            $dao = CRM_Core_DAO::executeQuery("
-                SELECT p.entity_id 
-                FROM civicrm_wallet_pass p
-                JOIN civicrm_participant cp ON p.entity_id = cp.id
-                WHERE cp.event_id = %1 AND p.entity_table = 'civicrm_participant'
-            ", [1 => [$id, 'Integer']]);
-            while ($dao->fetch()) {
-                $tasks[] = ['table' => 'civicrm_participant', 'id' => $dao->entity_id];
+            try {
+                // Use the legacy participant_id column until the entity migration has run.
+                $hasEntityId = (bool) CRM_Core_DAO::singleValueQuery("
+                    SELECT 1 FROM information_schema.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'civicrm_wallet_pass' AND COLUMN_NAME = 'entity_id'
+                ");
+
+                if ($hasEntityId) {
+                    $dao = CRM_Core_DAO::executeQuery("
+                        SELECT p.entity_id
+                        FROM civicrm_wallet_pass p
+                        JOIN civicrm_participant cp ON p.entity_id = cp.id
+                        WHERE cp.event_id = %1 AND p.entity_table = 'civicrm_participant'
+                    ", [1 => [$id, 'Integer']]);
+                    while ($dao->fetch()) {
+                        $tasks[] = ['table' => 'civicrm_participant', 'id' => $dao->entity_id];
+                    }
+                } else {
+                    // Preserve compatibility with the legacy 1.0 schema.
+                    $dao = CRM_Core_DAO::executeQuery("
+                        SELECT p.participant_id
+                        FROM civicrm_wallet_pass p
+                        JOIN civicrm_participant cp ON p.participant_id = cp.id
+                        WHERE cp.event_id = %1
+                    ", [1 => [$id, 'Integer']]);
+                    while ($dao->fetch()) {
+                        $tasks[] = ['table' => 'civicrm_participant', 'id' => $dao->participant_id];
+                    }
+                }
+            } catch (Throwable $e) {
+                // Never block a CiviCRM event save because pass refresh failed.
+                Civi::log()->warning('CRM_Wallet_BAO_Pass::updatePasses error: ' . $e->getMessage());
             }
         } elseif ($entity == 'Participant') {
             $tasks[] = ['table' => 'civicrm_participant', 'id' => $id];
