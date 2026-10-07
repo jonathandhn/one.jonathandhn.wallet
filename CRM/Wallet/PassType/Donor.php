@@ -69,15 +69,23 @@ class CRM_Wallet_PassType_Donor
         }
 
         // Barcode Value
-        $barcodeToken = Civi::settings()->get('wallet_barcode_donor') ?: '{contact.id}';
-        if (class_exists('\Civi\Token\TokenProcessor')) {
-            $tokenProcessor = new \Civi\Token\TokenProcessor(\Civi::dispatcher(), ['smarty' => false]);
-            $tokenProcessor->addMessage('barcode', $barcodeToken, 'text/plain');
-            $tokenProcessor->addRow(['contactId' => $contactId]);
-            $tokenProcessor->evaluate();
-            $barcodeValue = $tokenProcessor->getRow(0)->render('barcode');
-        } else {
-            $barcodeValue = $contactId;
+        $isSignedMode = (Civi::settings()->get('wallet_barcode_donor_mode') ?: 'simple') === 'signed';
+        $barcodeValue = '';
+        if ($isSignedMode) {
+            $barcodeValue = civi_wallet_build_signed_donor_barcode($contactId);
+        }
+
+        if (empty($barcodeValue)) {
+            $barcodeToken = Civi::settings()->get('wallet_barcode_donor') ?: '{contact.id}';
+            if (class_exists('\Civi\Token\TokenProcessor')) {
+                $tokenProcessor = new \Civi\Token\TokenProcessor(\Civi::dispatcher(), ['smarty' => false]);
+                $tokenProcessor->addMessage('barcode', $barcodeToken, 'text/plain');
+                $tokenProcessor->addRow(['contactId' => $contactId]);
+                $tokenProcessor->evaluate();
+                $barcodeValue = $tokenProcessor->getRow(0)->render('barcode');
+            } else {
+                $barcodeValue = $contactId;
+            }
         }
 
         $empty = null;

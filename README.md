@@ -10,7 +10,7 @@ This extension automatically generates wallet passes including QR codes, event d
 
 - **Apple Wallet**: Generates signed `.pkpass` files used in Apple Wallet.
 - **Google Wallet**: Creates "Event Ticket" objects via Google Wallet API and generates "Save to Android Pay" links.
-- **QR Codes**: Encodes participant/membership ID for check-in scanning. Generates native QR Codes for emails and PDFs locally (no external dependencies).
+- **QR Codes**: Generates native QR Codes for emails and PDFs locally (no external dependencies). Event tickets can stay in simple PID-compatible mode or switch to a signed HMAC payload.
 - **Automatic Updates**: 
   - Updates Apple Wallet passes via Push Notifications when Event details change.
   - Updates Google Wallet passes automatically in the cloud.
@@ -80,13 +80,17 @@ To generate Google Passes, you need a Google Pay API for Passes account.
 
 ### Event Configuration
 
-The extension adds a "Wallet Settings" custom group to Events.
-- **Wallet Image**: Upload a visual (strip image) for the pass (approx 375x98px for Apple).
-- **Wallet Background Color**: Override the default background color (Hex code, e.g., `#FF0000`).
+The extension adds a **Wallet** tab on Event configuration pages for event-level visual overrides.
+- **Wallet Image**: Upload a visual override for the event pass.
+- **Wallet Background Color**: Override the default background color for this event only (Hex code, e.g., `#FF0000`).
 
 ### Participant Workflow
 
 - Participants receive a download link or QR Code in their email confirmation by inserting the following tokens in Message Templates.
+- Event ticket QR generation now has two modes:
+  - `simple`: keeps maximum compatibility with raw participant IDs, exports, spreadsheets, N8N, and third-party senders.
+  - `signed`: emits a compact HMAC-signed `cw2` payload for scanner tooling that can verify authenticity.
+- Apple Wallet, Google Wallet, and local event QR images all use the same participant QR payload mode.
 
 HTML composite tokens:
 - `{contact.wallet_links}`: Membership Apple/Google buttons as HTML.
@@ -112,7 +116,11 @@ Raw participant tokens:
 - `{participant.qr_participant_url}`: Raw QR image URL for an event ticket.
 
 - The raw URL tokens are intended for custom MJML/HTML templates where you want to place Apple, Google, or QR assets independently.
-- Scanning the QR Code on the pass allows check-in. The recommended app is **[Civi Scan Webapp](https://github.com/jonathandhn/one.jonathandhn.scan)**, or standard QR lookup.
+- Event confirmation templates may URL-encode raw participant URL tokens when they are inserted directly inside an HTML attribute. In that context, prefer `{participant.qr_participant}` unless you have confirmed the template keeps raw `{...}` token syntax intact in source mode.
+- Event reminder templates must use the full participant token name, for example `{participant.qr_participant}` or `{participant.qr_participant_url}`. A malformed token such as `{qr_participant.}` is invalid Smarty syntax and will fail before token replacement.
+- Participant tokens are intentionally empty in generic contact context to avoid resolving the wrong registration when a contact has multiple event participations.
+- Tokens are only exposed in CiviCRM auto-complete when their underlying context and channel are enabled. For example, if Apple and Google are off, wallet-link tokens are hidden; if `membership` or `donor` are off, those token families are hidden as well.
+- Scanning the QR Code on the pass allows check-in. Simple mode works with any PID-aware scanner. Signed mode stays compatible with PID extraction, and CiviScan session mode can additionally verify the HMAC signature server-side.
 
 ### Donor Cards
 You can generate a pure Donor card for any Contact using the `{contact.wallet_links_donor}` token. 
@@ -161,7 +169,7 @@ cv ev '$q = CRM_Queue_Service::singleton()->create(["type" => "Sql", "name" => "
 
 ## Developer API (Hooks)
 
-You can customize the QR Code content dynamically (for example, to inject a cryptographic signature, JSON Web Token (JWT), or HMAC) without forking the extension.
+You can customize the QR Code content dynamically (for example, to inject another cryptographic signature format or a JWT) without forking the extension.
 
 Use the `civicrm_wallet_barcode_alter` hook in your custom extension:
 
@@ -175,19 +183,14 @@ Use the `civicrm_wallet_barcode_alter` hook in your custom extension:
  */
 function myextension_civicrm_wallet_barcode_alter(&$barcodeValue, $entityType, $entityId) {
     if ($entityType === 'Participant') {
-        // Example: Inject a signed JSON Web Token instead of the raw ID
+        // Example: replace the built-in payload with a JWT
         $payload = [
             'pid' => $entityId,
             'exp' => time() + 86400
         ];
         $secretKey = 'your-very-secret-key';
-        
-        // CiviCRM bundles \Firebase\JWT\JWT natively, so you can use it directly!
+
         $barcodeValue = \Firebase\JWT\JWT::encode($payload, $secretKey, 'HS256');
-        
-        // Example: Simple HMAC signature
-        $signature = hash_hmac('sha256', (string)$entityId, $secretKey);
-        $barcodeValue = json_encode(['id' => $entityId, 'sig' => $signature]);
     }
 }
 ```

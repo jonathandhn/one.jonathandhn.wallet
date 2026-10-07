@@ -94,17 +94,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             }
         }
 
-        $barcodeToken = Civi::settings()->get('wallet_barcode_participant') ?: '{participant.id}';
-        
-        if (class_exists('\Civi\Token\TokenProcessor')) {
-            $tokenProcessor = new \Civi\Token\TokenProcessor(\Civi::dispatcher(), ['smarty' => false]);
-            $tokenProcessor->addMessage('barcode', $barcodeToken, 'text/plain');
-            $tokenProcessor->addRow(['contactId' => $participant['contact_id'], 'participantId' => $participantId]);
-            $tokenProcessor->evaluate();
-            $barcodeValue = $tokenProcessor->getRow(0)->render('barcode');
-        } else {
-            $barcodeValue = $participantId; // Fallback
-        }
+        $barcodeValue = civi_wallet_generate_participant_barcode($participantId, (int) $participant['contact_id'], (int) $participant['event_id']);
 
         $entityType = 'Participant';
         $empty = null;
@@ -288,16 +278,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
         if (!$participant) throw new Exception("Participant not found");
 
         $event = \Civi\Api4\Event::get(FALSE)->addWhere('id', '=', $participant['event_id'])->execute()->first();
-        $barcodeToken = Civi::settings()->get('wallet_barcode_participant') ?: '{participant.id}';
-        if (class_exists('\Civi\Token\TokenProcessor')) {
-            $tokenProcessor = new \Civi\Token\TokenProcessor(\Civi::dispatcher(), ['smarty' => false]);
-            $tokenProcessor->addMessage('barcode', $barcodeToken, 'text/plain');
-            $tokenProcessor->addRow(['contactId' => $participant['contact_id'], 'participantId' => $participantId]);
-            $tokenProcessor->evaluate();
-            $barcodeValue = $tokenProcessor->getRow(0)->render('barcode');
-        } else {
-            $barcodeValue = $participantId; // Fallback
-        }
+        $barcodeValue = civi_wallet_generate_participant_barcode($participantId, (int) $participant['contact_id'], (int) $participant['event_id']);
 
         $entityType = 'Participant';
         $empty = null;

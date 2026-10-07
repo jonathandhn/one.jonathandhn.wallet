@@ -183,6 +183,44 @@
         {$form.wallet_color_membership_expired.html}
       </td>
     </tr>
+    <tr class="crm-wallet-barcode-membership-mode-form-block-wallet_barcode_membership_mode">
+      <td colspan="2">
+        <label class="wallet-field-label" for="wallet_barcode_membership_mode">{ts}Membership QR Mode{/ts}</label>
+        {$form.wallet_barcode_membership_mode.html}
+        <div class="description">{ts}Choose Simple (contact ID) or Signed (HMAC-protected cw2 payload) for membership cards.{/ts}</div>
+      </td>
+    </tr>
+    <tr class="crm-wallet-barcode-membership-form-block-wallet_barcode_membership">
+      <td colspan="2">
+        <label class="wallet-field-label" for="wallet_barcode_membership">{ts}Membership Barcode Content (Simple mode){/ts}</label>
+        {$form.wallet_barcode_membership.html}
+      </td>
+    </tr>
+  </table>
+
+  <h3>{ts}Event Ticket Settings{/ts}</h3>
+  <table class="form-layout-compressed">
+    <tr class="crm-wallet-barcode-participant-mode-form-block-wallet_barcode_participant_mode">
+      <td colspan="2">
+        <label class="wallet-field-label" for="wallet_barcode_participant_mode">{ts}Event Ticket QR Mode{/ts}</label>
+        {$form.wallet_barcode_participant_mode.html}
+        <div class="description">{ts}Use simple mode for raw PID compatibility with exports, N8N, spreadsheets, or third-party senders. Use signed mode for a stronger HMAC cw2 payload when CiviScan verifies it.{/ts}</div>
+      </td>
+    </tr>
+    <tr class="crm-wallet-barcode-participant-form-block-wallet_barcode_participant">
+      <td colspan="2">
+        <label class="wallet-field-label" for="wallet_barcode_participant">{ts}Event Ticket Barcode Content (Simple mode){/ts}</label>
+        {$form.wallet_barcode_participant.html}
+        <div class="description">{ts}Used by simple mode. Leave the default value to emit the participant ID explicitly.{/ts}</div>
+      </td>
+    </tr>
+    <tr class="crm-wallet-barcode-participant-secret-form-block-wallet_barcode_participant_secret">
+      <td colspan="2">
+        <label class="wallet-field-label" for="wallet_barcode_participant_secret">{ts}Shared QR Secret (HMAC){/ts}</label>
+        {$form.wallet_barcode_participant_secret.html}
+        <div class="description">{ts}Used by signed cw2 mode across all pass types (tickets, memberships, donor cards). Auto-generated if left empty.{/ts}</div>
+      </td>
+    </tr>
   </table>
 
   <h3>{ts}Donor Settings{/ts}</h3>
@@ -201,9 +239,16 @@
         <div class="description">{ts}Example: civicrm/profile/edit?reset=1&gid=1{/ts}</div>
       </td>
     </tr>
+    <tr class="crm-wallet-barcode-donor-mode-form-block-wallet_barcode_donor_mode">
+      <td colspan="2">
+        <label class="wallet-field-label" for="wallet_barcode_donor_mode">{ts}Donor Card QR Mode{/ts}</label>
+        {$form.wallet_barcode_donor_mode.html}
+        <div class="description">{ts}Choose Simple (contact ID) or Signed (HMAC-protected cw2 payload) for donor cards.{/ts}</div>
+      </td>
+    </tr>
     <tr class="crm-wallet-barcode-donor-form-block-wallet_barcode_donor">
       <td colspan="2">
-        <label class="wallet-field-label" for="wallet_barcode_donor">{ts}Donor Card Barcode Content{/ts}</label>
+        <label class="wallet-field-label" for="wallet_barcode_donor">{ts}Donor Card Barcode Content (Simple mode){/ts}</label>
         {$form.wallet_barcode_donor.html}
       </td>
     </tr>

@@ -32,9 +32,13 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting
         'wallet_membership_profile_url' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
         'wallet_donor_donate_url' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
         'wallet_donor_profile_url' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
+        'wallet_barcode_membership_mode' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
         'wallet_barcode_membership' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
-        'wallet_barcode_participant' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
+        'wallet_barcode_donor_mode' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
         'wallet_barcode_donor' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
+        'wallet_barcode_participant' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
+        'wallet_barcode_participant_mode' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
+        'wallet_barcode_participant_secret' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
     ];
 
     public function buildQuickForm()
@@ -102,22 +106,40 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting
         $this->add('file', 'wallet_image_icon_upload', E::ts('Icon (icon.png)'));
         $this->add('file', 'wallet_image_logo_upload', E::ts('Logo (logo.png)'));
 
+        $barcodeModes = [
+            'simple' => E::ts('Simple (ID / token compatible)'),
+            'signed' => E::ts('Signed (HMAC-protected cw2 payload)'),
+        ];
+
         // --- Membership Settings ---
         $this->add('text', 'wallet_membership_renew_url', E::ts('Membership Renew URL'), ['size' => 50, 'placeholder' => 'civicrm/contribute/transact?reset=1&id=1']);
         $this->add('text', 'wallet_membership_profile_url', E::ts('Profile Update URL'), ['size' => 50, 'placeholder' => 'civicrm/profile/edit?reset=1&gid=1']);
         $this->add('text', 'wallet_color_membership_active', E::ts('Membership Active Color'), ['type' => 'color', 'placeholder' => '#53b459']);
         $this->add('text', 'wallet_color_membership_expired', E::ts('Membership Expired Color'), ['type' => 'color', 'placeholder' => '#a0a0a0']);
+        $this->add('select', 'wallet_barcode_membership_mode', E::ts('Membership QR Mode'), $barcodeModes);
         $this->add('text', 'wallet_barcode_membership', E::ts('Membership Barcode Content (Tokens allowed)'), ['size' => 50, 'placeholder' => '{contact.id}']);
 
         // --- Participant Settings ---
+        $this->add('select', 'wallet_barcode_participant_mode', E::ts('Event Ticket QR Mode'), $barcodeModes);
         $this->add('text', 'wallet_barcode_participant', E::ts('Event Ticket Barcode Content (Tokens allowed)'), ['size' => 50, 'placeholder' => '{participant.id}']);
+        $this->add('text', 'wallet_barcode_participant_secret', E::ts('Shared QR Secret (HMAC)'), ['size' => 72, 'placeholder' => E::ts('Auto-generated when signed mode is saved')]);
 
         // --- Donor Settings ---
         $this->add('text', 'wallet_donor_donate_url', E::ts('Donor Donate URL'), ['size' => 50, 'placeholder' => 'civicrm/contribute/transact?reset=1&id=1']);
         $this->add('text', 'wallet_donor_profile_url', E::ts('Donor Profile Update URL'), ['size' => 50, 'placeholder' => 'civicrm/profile/edit?reset=1&gid=1']);
+        $this->add('select', 'wallet_barcode_donor_mode', E::ts('Donor Card QR Mode'), $barcodeModes);
         $this->add('text', 'wallet_barcode_donor', E::ts('Donor Card Barcode Content (Tokens allowed)'), ['size' => 50, 'placeholder' => '{contact.id}']);
 
         parent::buildQuickForm();
+    }
+
+    public function setDefaultValues()
+    {
+        $defaults = parent::setDefaultValues();
+        $defaults['wallet_barcode_membership_mode'] = Civi::settings()->get('wallet_barcode_membership_mode') ?: 'simple';
+        $defaults['wallet_barcode_donor_mode'] = Civi::settings()->get('wallet_barcode_donor_mode') ?: 'simple';
+        $defaults['wallet_barcode_participant_mode'] = Civi::settings()->get('wallet_barcode_participant_mode') ?: 'simple';
+        return $defaults;
     }
 
     public function postProcess()
@@ -125,6 +147,14 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting
         $values = $this->exportValues();
         $config = CRM_Core_Config::singleton();
         $uploadDir = $config->customFileUploadDir;
+        $booleanSettings = [
+            'wallet_channel_apple_enabled',
+            'wallet_channel_google_enabled',
+            'wallet_channel_qr_enabled',
+            'wallet_type_participant_enabled',
+            'wallet_type_membership_enabled',
+            'wallet_type_donor_enabled',
+        ];
 
         // Handle Apple Cert Upload
         if (!empty($_FILES['wallet_apple_cert_upload']['name'])) {
@@ -189,13 +219,30 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting
             'wallet_membership_profile_url',
             'wallet_donor_donate_url',
             'wallet_donor_profile_url',
+            'wallet_barcode_membership_mode',
             'wallet_barcode_membership',
-            'wallet_barcode_participant',
+            'wallet_barcode_donor_mode',
             'wallet_barcode_donor',
+            'wallet_barcode_participant',
+            'wallet_barcode_participant_mode',
+            'wallet_barcode_participant_secret',
         ];
 
+        $hasSigned = (($values['wallet_barcode_participant_mode'] ?? 'simple') === 'signed')
+            || (($values['wallet_barcode_membership_mode'] ?? 'simple') === 'signed')
+            || (($values['wallet_barcode_donor_mode'] ?? 'simple') === 'signed');
+
+        if ($hasSigned && empty($values['wallet_barcode_participant_secret'])) {
+            $values['wallet_barcode_participant_secret'] = civi_wallet_generate_participant_qr_secret();
+        }
+
         foreach ($settingsToSave as $setting) {
-            if (isset($values[$setting])) {
+            if (in_array($setting, $booleanSettings, true)) {
+                Civi::settings()->set($setting, !empty($values[$setting]) ? 1 : 0);
+                continue;
+            }
+
+            if (array_key_exists($setting, $values)) {
                 Civi::settings()->set($setting, $values[$setting]);
             }
         }
