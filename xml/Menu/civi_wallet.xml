@@ -34,4 +34,10 @@
     <title>CiviWallet Configuration</title>
     <adminGroup>System Settings</adminGroup>
   </item>
+  <item>
+    <path>civicrm/event/manage/wallet</path>
+    <page_callback>CRM_Wallet_Form_ManageEvent_Wallet</page_callback>
+    <access_callback>1</access_callback>
+    <title>Wallet Event Settings</title>
+  </item>
 </menu>

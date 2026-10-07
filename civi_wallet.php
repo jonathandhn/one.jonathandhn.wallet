@@ -106,6 +106,33 @@ function civi_wallet_civicrm_enable()
 }
 
 /**
+ * Implements hook_civicrm_tabset().
+ */
+function civi_wallet_civicrm_tabset($tabsetName, &$tabs, $context)
+{
+    if ($tabsetName !== 'civicrm/event/manage') {
+        return;
+    }
+
+    $eventID = (int) ($context['event_id'] ?? 0);
+    if ($eventID <= 0) {
+        return;
+    }
+
+    if (!CRM_Core_Permission::check('edit all events') && !CRM_Core_Permission::check('administer CiviCRM')) {
+        return;
+    }
+
+    $tabs[] = [
+        'id' => 'wallet',
+        'title' => E::ts('Wallet'),
+        'url' => CRM_Utils_System::url('civicrm/event/manage/wallet', "reset=1&snippet=1&action=update&id={$eventID}"),
+        'weight' => 95,
+        'icon' => 'crm-i fa-wallet',
+    ];
+}
+
+/**
  * Implements hook_civicrm_post().
  *
  * Trigger pass updates when Event or Participant is modified.
