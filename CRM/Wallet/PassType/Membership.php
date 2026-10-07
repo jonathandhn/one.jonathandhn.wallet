@@ -103,7 +103,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface
             'passTypeIdentifier' => $passTypeIdentifier,
             'serialNumber' => $serialNumber,
             'authenticationToken' => $authenticationToken,
-            'webServiceURL' => rtrim(CRM_Utils_System::baseCMSURL(), '/') . '/civicrm/wallet/api',
+            'webServiceURL' => CRM_Wallet_Utils_Url::webrootScript(),
             'teamIdentifier' => $teamIdentifier,
             'backgroundColor' => $bgColor,
             'foregroundColor' => 'rgb(255,255,255)',

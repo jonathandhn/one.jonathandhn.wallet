@@ -184,7 +184,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface
             'passTypeIdentifier' => $passTypeIdentifier,
             'serialNumber' => $serialNumber,
             'authenticationToken' => $authenticationToken,
-            'webServiceURL' => rtrim(CRM_Utils_System::baseCMSURL(), '/') . '/civicrm/wallet/api',
+            'webServiceURL' => CRM_Wallet_Utils_Url::webrootScript(),
             'teamIdentifier' => $teamIdentifier,
             'backgroundColor' => Civi::settings()->get('wallet_color_background') ?: 'rgb(83,180,89)',
             'foregroundColor' => Civi::settings()->get('wallet_color_foreground') ?: 'rgb(255,255,255)',

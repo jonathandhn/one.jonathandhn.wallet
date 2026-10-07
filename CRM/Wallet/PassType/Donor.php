@@ -109,7 +109,7 @@ class CRM_Wallet_PassType_Donor
             'passTypeIdentifier' => $passTypeId,
             'serialNumber' => $serialNumber,
             'authenticationToken' => $authenticationToken,
-            'webServiceURL' => rtrim(CRM_Utils_System::baseCMSURL(), '/') . '/civicrm/wallet/api',
+            'webServiceURL' => CRM_Wallet_Utils_Url::webrootScript(),
             'teamIdentifier' => $teamId,
             'organizationName' => $orgName,
             'description' => $orgDesc,
