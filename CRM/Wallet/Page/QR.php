@@ -54,6 +54,7 @@ class CRM_Wallet_Page_QR extends CRM_Core_Page
     public function run()
     {
         $entityId = CRM_Utils_Request::retrieve('id', 'Integer', CRM_Core_DAO::$_nullObject, FALSE);
+        $participantId = CRM_Utils_Request::retrieve('pid', 'Integer', CRM_Core_DAO::$_nullObject, FALSE);
         $contactId = CRM_Utils_Request::retrieve('cid', 'Integer', CRM_Core_DAO::$_nullObject, FALSE);
         $entity = CRM_Utils_Request::retrieve('entity', 'String', CRM_Core_DAO::$_nullObject, TRUE);
         $hash = CRM_Utils_Request::retrieve('cs', 'String', CRM_Core_DAO::$_nullObject, FALSE, '');
@@ -66,6 +67,10 @@ class CRM_Wallet_Page_QR extends CRM_Core_Page
 
         // Determine Contact ID and Entity ID
         if ($entity === 'participant') {
+            if ($participantId) {
+                $entityId = $participantId;
+            }
+
             if ($entityId) {
                 $participant = \Civi\Api4\Participant::get(FALSE)
                     ->addWhere('id', '=', $entityId)
