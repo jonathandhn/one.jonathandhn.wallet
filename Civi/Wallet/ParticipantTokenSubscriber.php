@@ -197,12 +197,12 @@ class ParticipantTokenSubscriber extends AutoService implements EventSubscriberI
         $participantQrUrl = '';
 
         if (civi_wallet_is_context_enabled('participant') && civi_wallet_is_channel_enabled('apple') && $cid) {
-          $participantAppleUrl = \CRM_Utils_System::url('civicrm/wallet/pass', "cid={$cid}&cs={$cs}&type=apple&context=participant", TRUE, NULL, FALSE, TRUE);
+          $participantAppleUrl = \CRM_Utils_System::url('civicrm/wallet/pass', "pid={$pid}&cid={$cid}&cs={$cs}&type=apple&context=participant", TRUE, NULL, FALSE, TRUE);
           $htmlParticipant .= "<a href='{$participantAppleUrl}' style='{$btnStyleApple}'>" . ts('Add to Apple Wallet') . "</a>";
         }
 
         if (civi_wallet_is_context_enabled('participant') && civi_wallet_is_channel_enabled('google') && $cid) {
-          $participantGoogleUrl = \CRM_Utils_System::url('civicrm/wallet/pass', "cid={$cid}&cs={$cs}&type=google&context=participant", TRUE, NULL, FALSE, TRUE);
+          $participantGoogleUrl = \CRM_Utils_System::url('civicrm/wallet/pass', "pid={$pid}&cid={$cid}&cs={$cs}&type=google&context=participant", TRUE, NULL, FALSE, TRUE);
           if ($htmlParticipant !== '') {
             $htmlParticipant .= ' ';
           }
