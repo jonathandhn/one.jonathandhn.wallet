@@ -72,6 +72,8 @@ $phpFiles = [
   ...walletPhpFiles($projectRoot . '/managed'),
   ...walletPhpFiles($projectRoot . '/settings'),
   $projectRoot . '/civi_wallet.php',
+  $projectRoot . '/extern/api.php',
+  $projectRoot . '/scripts/simulate-apple-wallet.php',
   __FILE__,
 ];
 sort($phpFiles);

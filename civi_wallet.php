@@ -399,6 +399,52 @@ function civi_wallet_generate_participant_barcode($participantId, $contactId = N
   return civi_wallet_render_participant_barcode_token($contactId, $participantId);
 }
 
+function civi_wallet_generate_membership_barcode($contactId, $membershipId) {
+  if ((Civi::settings()->get('wallet_barcode_membership_mode') ?: 'simple') === 'signed') {
+    $signed = civi_wallet_build_signed_contact_barcode($contactId);
+    if ($signed !== NULL && $signed !== '') {
+      return $signed;
+    }
+    CRM_Core_Error::debug_log_message("Wallet signed membership barcode fallback to simple mode for membership {$membershipId}");
+  }
+
+  $barcodeToken = Civi::settings()->get('wallet_barcode_membership') ?: '{contact.id}';
+  if (!class_exists('\Civi\Token\TokenProcessor')) {
+    return (string) $contactId;
+  }
+
+  $tokenProcessor = new \Civi\Token\TokenProcessor(\Civi::dispatcher(), ['smarty' => FALSE]);
+  $tokenProcessor->addMessage('barcode', $barcodeToken, 'text/plain');
+  $tokenProcessor->addRow(['contactId' => $contactId, 'membershipId' => $membershipId]);
+  $tokenProcessor->evaluate();
+
+  $barcodeValue = trim((string) $tokenProcessor->getRow(0)->render('barcode'));
+  return $barcodeValue !== '' ? $barcodeValue : (string) $contactId;
+}
+
+function civi_wallet_generate_donor_barcode($contactId) {
+  if ((Civi::settings()->get('wallet_barcode_donor_mode') ?: 'simple') === 'signed') {
+    $signed = civi_wallet_build_signed_donor_barcode($contactId);
+    if ($signed !== NULL && $signed !== '') {
+      return $signed;
+    }
+    CRM_Core_Error::debug_log_message("Wallet signed donor barcode fallback to simple mode for contact {$contactId}");
+  }
+
+  $barcodeToken = Civi::settings()->get('wallet_barcode_donor') ?: '{contact.id}';
+  if (!class_exists('\Civi\Token\TokenProcessor')) {
+    return (string) $contactId;
+  }
+
+  $tokenProcessor = new \Civi\Token\TokenProcessor(\Civi::dispatcher(), ['smarty' => FALSE]);
+  $tokenProcessor->addMessage('barcode', $barcodeToken, 'text/plain');
+  $tokenProcessor->addRow(['contactId' => $contactId]);
+  $tokenProcessor->evaluate();
+
+  $barcodeValue = trim((string) $tokenProcessor->getRow(0)->render('barcode'));
+  return $barcodeValue !== '' ? $barcodeValue : (string) $contactId;
+}
+
 /**
  * Implements hook_civicrm_alterMenu().
  *

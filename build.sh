@@ -111,6 +111,8 @@ for item in "${RUNTIME_RESOURCES[@]}"; do
   [[ -e "${ROOT_DIR}/${item}" ]] || fail "missing runtime resource: ${item}"
   cp -R "${ROOT_DIR}/${item}" "${PACKAGE_DIR}/"
 done
+mkdir -p "${PACKAGE_DIR}/scripts"
+cp "${ROOT_DIR}/scripts/simulate-apple-wallet.php" "${PACKAGE_DIR}/scripts/"
 
 readonly REQUIRED_PACKAGE_FILES=(
   info.xml
@@ -122,6 +124,7 @@ readonly REQUIRED_PACKAGE_FILES=(
   settings/Wallet.setting.php
   templates/CRM/Wallet/Form/Config.tpl
   l10n/fr_FR.mo
+  scripts/simulate-apple-wallet.php
   vendor/autoload.php
   vendor/pkpass/pkpass/src/Certificate/AppleWWDRCA.pem
 )

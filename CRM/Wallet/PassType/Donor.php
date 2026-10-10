@@ -67,25 +67,7 @@ class CRM_Wallet_PassType_Donor {
     }
 
     // Barcode Value
-    $isSignedMode = (Civi::settings()->get('wallet_barcode_donor_mode') ?: 'simple') === 'signed';
-    $barcodeValue = '';
-    if ($isSignedMode) {
-      $barcodeValue = civi_wallet_build_signed_donor_barcode($contactId);
-    }
-
-    if (empty($barcodeValue)) {
-      $barcodeToken = Civi::settings()->get('wallet_barcode_donor') ?: '{contact.id}';
-      if (class_exists('\Civi\Token\TokenProcessor')) {
-        $tokenProcessor = new \Civi\Token\TokenProcessor(\Civi::dispatcher(), ['smarty' => FALSE]);
-        $tokenProcessor->addMessage('barcode', $barcodeToken, 'text/plain');
-        $tokenProcessor->addRow(['contactId' => $contactId]);
-        $tokenProcessor->evaluate();
-        $barcodeValue = $tokenProcessor->getRow(0)->render('barcode');
-      }
-      else {
-        $barcodeValue = $contactId;
-      }
-    }
+    $barcodeValue = civi_wallet_generate_donor_barcode($contactId);
 
     $empty = NULL;
     $barcodeEntityType = 'Contact';
@@ -148,11 +130,13 @@ class CRM_Wallet_PassType_Donor {
                     ],
         ],
       ],
-      'barcode' => [
-        'format' => 'PKBarcodeFormatQR',
-        'message' => $qrCodeContent,
-        'messageEncoding' => 'iso-8859-1',
-        'altText' => $qrCodeAltText,
+      'barcodes' => [
+        [
+          'format' => 'PKBarcodeFormatQR',
+          'message' => $qrCodeContent,
+          'messageEncoding' => 'iso-8859-1',
+          'altText' => $qrCodeAltText,
+        ],
       ],
     ];
 
@@ -285,18 +269,7 @@ class CRM_Wallet_PassType_Donor {
     $profileUrl = self::buildContactContextUrl(Civi::settings()->get('wallet_donor_profile_url') ?: Civi::settings()->get('wallet_membership_profile_url'), $contactId);
     $donateUrl = self::buildContactContextUrl(Civi::settings()->get('wallet_donor_donate_url') ?: Civi::settings()->get('wallet_membership_renew_url'), $contactId);
 
-    // Generate barcode
-    $barcodeToken = Civi::settings()->get('wallet_barcode_donor') ?: '{contact.id}';
-    if (class_exists('\Civi\Token\TokenProcessor')) {
-      $tokenProcessor = new \Civi\Token\TokenProcessor(\Civi::dispatcher(), ['smarty' => FALSE]);
-      $tokenProcessor->addMessage('barcode', $barcodeToken, 'text/plain');
-      $tokenProcessor->addRow(['contactId' => $contactId]);
-      $tokenProcessor->evaluate();
-      $barcodeValue = $tokenProcessor->getRow(0)->render('barcode');
-    }
-    else {
-      $barcodeValue = $contactId;
-    }
+    $barcodeValue = civi_wallet_generate_donor_barcode($contactId);
 
     $empty = NULL;
     $barcodeEntityType = 'Contact';

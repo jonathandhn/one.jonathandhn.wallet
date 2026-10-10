@@ -63,26 +63,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
       ]);
     }
 
-    $isSignedMode = (Civi::settings()->get('wallet_barcode_membership_mode') ?: 'simple') === 'signed';
-    $barcodeValue = '';
-    if ($isSignedMode) {
-      $barcodeValue = civi_wallet_build_signed_contact_barcode($contactId);
-    }
-
-    if (empty($barcodeValue)) {
-      $barcodeToken = Civi::settings()->get('wallet_barcode_membership') ?: '{contact.id}';
-      if (class_exists('\Civi\Token\TokenProcessor')) {
-        $tokenProcessor = new \Civi\Token\TokenProcessor(\Civi::dispatcher(), ['smarty' => FALSE]);
-        $tokenProcessor->addMessage('barcode', $barcodeToken, 'text/plain');
-        $tokenProcessor->addRow(['contactId' => $contactId, 'membershipId' => $membershipId]);
-        $tokenProcessor->evaluate();
-        $barcodeValue = $tokenProcessor->getRow(0)->render('barcode');
-      }
-      else {
-        // Fallback
-        $barcodeValue = $contactId;
-      }
-    }
+    $barcodeValue = civi_wallet_generate_membership_barcode($contactId, $membershipId);
 
     $entityType = 'Membership';
     $empty = NULL;
@@ -161,11 +142,13 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
                     ],
         ],
       ],
-      'barcode' => [
-        'format' => 'PKBarcodeFormatQR',
-        'message' => $qrCodeContent,
-        'messageEncoding' => 'iso-8859-1',
-        'altText' => $qrCodeAltText,
+      'barcodes' => [
+        [
+          'format' => 'PKBarcodeFormatQR',
+          'message' => $qrCodeContent,
+          'messageEncoding' => 'iso-8859-1',
+          'altText' => $qrCodeAltText,
+        ],
       ],
     ];
 
@@ -244,18 +227,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
     $service = new \Google\Service\Walletobjects($client);
 
     $classId = $issuerId . '.Membership';
-    $barcodeToken = Civi::settings()->get('wallet_barcode_membership') ?: '{contact.id}';
-    if (class_exists('\Civi\Token\TokenProcessor')) {
-      $tokenProcessor = new \Civi\Token\TokenProcessor(\Civi::dispatcher(), ['smarty' => FALSE]);
-      $tokenProcessor->addMessage('barcode', $barcodeToken, 'text/plain');
-      $tokenProcessor->addRow(['contactId' => $contactId, 'membershipId' => $membershipId]);
-      $tokenProcessor->evaluate();
-      $barcodeValue = $tokenProcessor->getRow(0)->render('barcode');
-    }
-    else {
-      // Fallback
-      $barcodeValue = $contactId;
-    }
+    $barcodeValue = civi_wallet_generate_membership_barcode($contactId, $membershipId);
 
     $entityType = 'Membership';
     $empty = NULL;
@@ -355,6 +327,14 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
                 ],
       ],
     ];
+
+    if (!empty($membership['end_date'])) {
+      $objectMetadata['validTimeInterval'] = [
+        'end' => [
+          'date' => date('c', strtotime($membership['end_date'] . ' 23:59:59')),
+        ],
+      ];
+    }
 
     $uris = [];
     $uris[] = [

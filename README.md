@@ -55,6 +55,19 @@ The extension attempts to install `civi-wallet-api.php` automatically. If it fai
 cp extensions/one.jonathandhn.wallet/extern/api.php /path/to/webroot/civi-wallet-api.php
 ```
 
+You can test the public endpoint without an Apple device by using an existing
+Apple pass record. The simulator verifies registration, update polling, pass
+download, the modern `barcodes` payload, logging, and unregistration. It does
+not validate delivery through APNs because it uses a synthetic push token.
+
+```bash
+APPLE_WALLET_AUTH_TOKEN='pass-authentication-token' \
+php scripts/simulate-apple-wallet.php \
+  --base-url=https://example.org/civi-wallet-api.php \
+  --pass-type-id=pass.org.example.event \
+  --serial-number=existing-pass-serial
+```
+
 ## Configuration
 
 Navigate to **Administer > CiviEvent > Wallet Settings**.

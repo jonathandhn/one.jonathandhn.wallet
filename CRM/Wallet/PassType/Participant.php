@@ -217,11 +217,13 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
         'auxiliaryFields' => $auxiliaryFields,
         'backFields' => $backFields,
       ],
-      'barcode' => [
-        'format' => 'PKBarcodeFormatQR',
-        'message' => $qrCodeContent,
-        'messageEncoding' => 'iso-8859-1',
-        'altText' => $qrCodeAltText,
+      'barcodes' => [
+        [
+          'format' => 'PKBarcodeFormatQR',
+          'message' => $qrCodeContent,
+          'messageEncoding' => 'iso-8859-1',
+          'altText' => $qrCodeAltText,
+        ],
       ],
       'locations' => $locations,
       'relevantDate' => date('c', strtotime($event['start_date'])),

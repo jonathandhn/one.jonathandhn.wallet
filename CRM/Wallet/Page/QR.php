@@ -143,43 +143,11 @@ class CRM_Wallet_Page_QR extends CRM_Core_Page {
       $entityType = 'Participant';
     }
     elseif ($entity === 'membership') {
-      $isMembershipSigned = (Civi::settings()->get('wallet_barcode_membership_mode') ?: 'simple') === 'signed';
-      if ($isMembershipSigned) {
-        $barcodeValue = civi_wallet_build_signed_contact_barcode($contactId);
-      }
-      if (empty($barcodeValue)) {
-        $barcodeToken = Civi::settings()->get('wallet_barcode_membership') ?: '{contact.id}';
-        if (class_exists('\Civi\Token\TokenProcessor')) {
-          $tokenProcessor = new \Civi\Token\TokenProcessor(\Civi::dispatcher(), ['smarty' => FALSE]);
-          $tokenProcessor->addMessage('barcode', $barcodeToken, 'text/plain');
-          $tokenProcessor->addRow(['contactId' => $contactId, 'membershipId' => $entityId]);
-          $tokenProcessor->evaluate();
-          $barcodeValue = $tokenProcessor->getRow(0)->render('barcode');
-        }
-        else {
-          $barcodeValue = $contactId;
-        }
-      }
+      $barcodeValue = civi_wallet_generate_membership_barcode($contactId, $entityId);
       $entityType = 'Membership';
     }
     elseif ($entity === 'donor') {
-      $isDonorSigned = (Civi::settings()->get('wallet_barcode_donor_mode') ?: 'simple') === 'signed';
-      if ($isDonorSigned) {
-        $barcodeValue = civi_wallet_build_signed_donor_barcode($contactId);
-      }
-      if (empty($barcodeValue)) {
-        $barcodeToken = Civi::settings()->get('wallet_barcode_donor') ?: '{contact.id}';
-        if (class_exists('\Civi\Token\TokenProcessor')) {
-          $tokenProcessor = new \Civi\Token\TokenProcessor(\Civi::dispatcher(), ['smarty' => FALSE]);
-          $tokenProcessor->addMessage('barcode', $barcodeToken, 'text/plain');
-          $tokenProcessor->addRow(['contactId' => $contactId]);
-          $tokenProcessor->evaluate();
-          $barcodeValue = $tokenProcessor->getRow(0)->render('barcode');
-        }
-        else {
-          $barcodeValue = $contactId;
-        }
-      }
+      $barcodeValue = civi_wallet_generate_donor_barcode($contactId);
       $entityType = 'Contact';
     }
     elseif ($entity === 'contact') {
