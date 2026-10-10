@@ -4,7 +4,22 @@ Generate Apple Wallet (`.pkpass`) and Google Wallet passes for CiviCRM Event Par
 This extension automatically generates wallet passes including QR codes, event details, venue location, and custom styling.
 
 ## Repository
-[https://github.com/jonathandhn/org.jonathandhn.wallet](https://github.com/jonathandhn/org.jonathandhn.wallet)
+
+[https://github.com/jonathandhn/CiviWallet](https://github.com/jonathandhn/CiviWallet)
+
+## Release package
+
+Install the single scoped package named `one.jonathandhn.wallet.zip`. GitHub
+releases publish this file with its SHA-256 checksum. GitLab releases expose a
+stable project-relative download endpoint at:
+
+```text
+/-/releases/permalink/latest/downloads/wallet.zip
+```
+
+The complete URL is the GitLab project URL followed by this path. Source-code
+archives are not installable release packages because they do not contain the
+scoped production dependencies.
 
 ## Features
 
@@ -20,8 +35,8 @@ This extension automatically generates wallet passes including QR codes, event d
 
 ## Requirements
 
-- CiviCRM 5.x
-- PHP 7.4+ or 8.x
+- CiviCRM 6.16
+- PHP 8.4 or 8.5
 - `openssl` PHP extension
 - `json` PHP extension
 

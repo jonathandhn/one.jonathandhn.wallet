@@ -1,0 +1,86 @@
+image: php:8.4-cli
+
+stages:
+  - test
+  - build
+  - package
+  - release
+
+variables:
+  COMPOSER_ALLOW_SUPERUSER: "1"
+
+before_script:
+  - apt-get update -qq && apt-get install -y -qq git libzip-dev unzip zip
+  - docker-php-ext-install zip
+  - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+test:
+  stage: test
+  script:
+    - composer validate --no-check-publish
+    - composer install --prefer-dist --no-progress
+    - composer check-platform-reqs --no-dev
+    - find Civi CRM -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+    - php -l civi_wallet.php
+    - php -l civi_wallet.civix.php
+  rules:
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+build_release:
+  stage: build
+  script:
+    - composer install --prefer-dist --no-progress
+    - ./build.sh
+    - sha256sum one.jonathandhn.wallet.zip > SHA256SUMS
+  artifacts:
+    name: "one.jonathandhn.wallet-${CI_COMMIT_REF_SLUG}"
+    paths:
+      - one.jonathandhn.wallet.zip
+      - SHA256SUMS
+    expire_in: 1 day
+  rules:
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+publish_release_package:
+  stage: package
+  image: curlimages/curl:8.12.1
+  before_script: []
+  needs:
+    - job: build_release
+      artifacts: true
+  script:
+    - 'export PACKAGE_URL="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/civiwallet/${CI_COMMIT_TAG}"'
+    - 'curl --fail-with-body --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file one.jonathandhn.wallet.zip "${PACKAGE_URL}/one.jonathandhn.wallet.zip"'
+    - 'curl --fail-with-body --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file SHA256SUMS "${PACKAGE_URL}/SHA256SUMS"'
+  rules:
+    - if: $CI_COMMIT_TAG
+
+create_release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  before_script: []
+  needs:
+    - job: publish_release_package
+  script:
+    - echo "Creating release ${CI_COMMIT_TAG}"
+  release:
+    name: 'Release ${CI_COMMIT_TAG}'
+    description: 'Scoped installable CiviWallet package built by GitLab CI.'
+    tag_name: '${CI_COMMIT_TAG}'
+    assets:
+      links:
+        - name: 'CiviWallet installable ZIP'
+          url: '${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/civiwallet/${CI_COMMIT_TAG}/one.jonathandhn.wallet.zip'
+          filepath: '/wallet.zip'
+          link_type: 'package'
+        - name: 'SHA256 checksum'
+          url: '${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/civiwallet/${CI_COMMIT_TAG}/SHA256SUMS'
+          filepath: '/SHA256SUMS'
+          link_type: 'package'
+  rules:
+    - if: $CI_COMMIT_TAG

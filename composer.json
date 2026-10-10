@@ -9,13 +9,26 @@
         }
     ],
     "require": {
-        "php": ">=8.2",
+        "php": ">=8.4",
         "pkpass/pkpass": "^2.0",
         "google/apiclient": "^2.0",
         "chillerlan/php-qrcode": "^6.0"
     },
     "require-dev": {
         "humbug/php-scoper": "^0.18 || ^0.17"
+    },
+    "scripts": {
+        "pre-autoload-dump": "Google\\Task\\Composer::cleanup"
+    },
+    "extra": {
+        "google/apiclient-services": [
+            "Walletobjects"
+        ]
+    },
+    "config": {
+        "platform": {
+            "php": "8.4.0"
+        }
     },
     "autoload": {
         "psr-4": {

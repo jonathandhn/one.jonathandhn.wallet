@@ -5,12 +5,13 @@ on:
   push:
     tags:
       - "v*"
+      - "[0-9]*"
 
 permissions:
   contents: write
 
 jobs:
-  build-release:
+  build-and-release:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,93 +21,36 @@ jobs:
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.2"
+          php-version: "8.4"
           coverage: none
+          extensions: zip
           tools: composer:v2
 
-      - name: Validate composer metadata
+      - name: Validate Composer metadata
         run: composer validate --no-check-publish
 
-      - name: Prepare source package
-        run: |
-          mkdir -p dist
-          rsync -a \
-            --exclude '.git' \
-            --exclude '.github' \
-            --exclude 'vendor' \
-            --exclude '.idea' \
-            --exclude '.vscode' \
-            --exclude '.DS_Store' \
-            --exclude '*.p12' \
-            --exclude '*.pem' --include 'vendor/pkpass/pkpass/src/Certificate/AppleWWDRCA.pem' \
-            --exclude '*.key' \
-            --exclude '*.p8' \
-            --exclude '*credential*.json' \
-            --exclude '*secret*.json' \
-            --exclude 'google-services.json' \
-            --exclude 'client_secret_*.json' \
-            --exclude 'service-account.json' \
-            --exclude 'auth.json' \
-            --exclude 'dist' \
-            --exclude 'dist-bundled' \
-            ./ dist/one.jonathandhn.wallet/
-          cd dist
-          zip -r civi-wallet-source.zip one.jonathandhn.wallet
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
 
-      - name: Install production dependencies
-        run: composer install --no-dev --prefer-dist --optimize-autoloader
+      - name: Build scoped installable package
+        run: ./build.sh
 
-      - name: Collect third-party licenses for bundled package
-        run: |
-          mkdir -p dist-bundled/licenses
-          cp vendor/pkpass/pkpass/LICENSE dist-bundled/licenses/pkpass-pkpass.LICENSE
-          cp vendor/google/apiclient/LICENSE dist-bundled/licenses/google-apiclient.LICENSE
-          if [ -f vendor/google/apiclient/NOTICE ]; then
-            cp vendor/google/apiclient/NOTICE dist-bundled/licenses/google-apiclient.NOTICE
-          fi
+      - name: Generate checksum
+        run: sha256sum one.jonathandhn.wallet.zip > SHA256SUMS
 
-      - name: Prepare bundled package
-        run: |
-          mkdir -p dist-bundled
-          rsync -a \
-            --exclude '.git' \
-            --exclude '.github' \
-            --exclude '.idea' \
-            --exclude '.vscode' \
-            --exclude '.DS_Store' \
-            --exclude '*.p12' \
-            --exclude '*.pem' --include 'vendor/pkpass/pkpass/src/Certificate/AppleWWDRCA.pem' \
-            --exclude '*.key' \
-            --exclude '*.p8' \
-            --exclude '*credential*.json' \
-            --exclude '*secret*.json' \
-            --exclude 'google-services.json' \
-            --exclude 'client_secret_*.json' \
-            --exclude 'service-account.json' \
-            --exclude 'auth.json' \
-            --exclude 'dist' \
-            --exclude 'dist-bundled' \
-            ./ dist-bundled/one.jonathandhn.wallet/
-          cp -a dist-bundled/licenses dist-bundled/one.jonathandhn.wallet/licenses
-          cd dist-bundled
-          zip -r civi-wallet-bundled.zip one.jonathandhn.wallet
-
-      - name: Upload source artifact
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: civi-wallet-source
-          path: dist/civi-wallet-source.zip
+          name: one.jonathandhn.wallet
+          path: |
+            one.jonathandhn.wallet.zip
+            SHA256SUMS
 
-      - name: Upload bundled artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: civi-wallet-bundled
-          path: dist-bundled/civi-wallet-bundled.zip
-
-      - name: Attach artifacts to GitHub release
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/civi-wallet-source.zip
-            dist-bundled/civi-wallet-bundled.zip
+            one.jonathandhn.wallet.zip
+            SHA256SUMS
+          generate_release_notes: true
