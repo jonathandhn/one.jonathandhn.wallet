@@ -417,22 +417,13 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
             $src = $config->customFileUploadDir . $fileName;
 
             if (file_exists($src)) {
-              $extPath = CRM_Extension_System::singleton()->getMapper()->keyToBasePath('one.jonathandhn.wallet');
-              $publicImgDir = $extPath . '/resources/images/events/';
-              if (!file_exists($publicImgDir)) {
-                mkdir($publicImgDir, 0755, TRUE);
-              }
-
-              $destName = 'event-' . $event['id'] . '.png';
-              $dest = $publicImgDir . $destName;
-              if (copy($src, $dest)) {
-                $heroUrl = $extUrl . '/resources/images/events/' . $destName . '?v=' . $timestamp;
-              }
+              $heroUrl = CRM_Wallet_Utils_EventImage::publishForGoogle((int) $event['id'], $src);
             }
           }
         }
       }
-      catch (Exception) {
+      catch (Exception $e) {
+        CRM_Core_Error::debug_log_message('Google Wallet event image publication failed: ' . $e->getMessage());
       }
     }
 
