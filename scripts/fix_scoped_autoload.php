@@ -37,8 +37,26 @@ function export_php(mixed $value): string
 
 function normalize_path_for_runtime(string $path, string $distDir): string
 {
+    $resolvedDistDir = realpath($distDir);
+    if ($resolvedDistDir !== false) {
+        $distDir = $resolvedDistDir;
+    }
+
+    $resolvedPath = realpath($path);
+    if ($resolvedPath !== false) {
+        $path = $resolvedPath;
+    }
+
     $distDir = rtrim(str_replace('\\', '/', $distDir), '/');
     $path = str_replace('\\', '/', $path);
+
+    if ($path === $distDir . '/vendor') {
+        return '$vendorDir';
+    }
+
+    if ($path === $distDir) {
+        return '$baseDir';
+    }
 
     if (str_starts_with($path, $distDir . '/vendor/')) {
         return '$vendorDir . ' . var_export(substr($path, strlen($distDir . '/vendor')), true);

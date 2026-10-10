@@ -6,6 +6,7 @@ readonly ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 readonly PACKAGE_NAME="one.jonathandhn.wallet"
 readonly OUTPUT_ZIP="${ROOT_DIR}/${PACKAGE_NAME}.zip"
 readonly WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/${PACKAGE_NAME}.build.XXXXXX")"
+readonly RESOLVED_WORK_DIR="$(cd -- "${WORK_DIR}" && pwd -P)"
 readonly SOURCE_DIR="${WORK_DIR}/source"
 readonly PACKAGE_DIR="${WORK_DIR}/package/${PACKAGE_NAME}"
 readonly TEMP_ZIP="${WORK_DIR}/${PACKAGE_NAME}.zip"
@@ -62,6 +63,12 @@ php -d error_reporting='E_ALL & ~E_DEPRECATED' -d memory_limit=-1 \
   --no-interaction \
   --quiet
 php "${ROOT_DIR}/scripts/fix_scoped_autoload.php" "${PACKAGE_DIR}" >/dev/null
+
+for build_path in "${WORK_DIR}" "${RESOLVED_WORK_DIR}"; do
+  if grep -R -F --include='*.php' "${build_path}" "${PACKAGE_DIR}/vendor/composer" >/dev/null; then
+    fail "scoped Composer autoload files contain build-directory paths"
+  fi
+done
 
 # PHP-Scoper only copies PHP files. PKPass requires Apple's public WWDR
 # intermediate certificate at runtime to sign passes.
