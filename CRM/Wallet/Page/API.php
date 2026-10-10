@@ -127,7 +127,15 @@ class CRM_Wallet_Page_API extends CRM_Core_Page {
       return;
     }
 
-    // Insert or Update Device
+    $isRegistered = (bool) CRM_Core_DAO::singleValueQuery(
+      'SELECT COUNT(*) FROM civicrm_wallet_device WHERE pass_id = %1 AND device_library_identifier = %2',
+      [
+        1 => [$pass->id, 'Integer'],
+        2 => [$deviceId, 'String'],
+      ]
+    );
+
+    // Insert or update the device registration.
     $sql = "INSERT INTO civicrm_wallet_device (pass_id, device_library_identifier, push_token)
             VALUES (%1, %2, %3)
             ON DUPLICATE KEY UPDATE push_token = %3";
@@ -138,7 +146,7 @@ class CRM_Wallet_Page_API extends CRM_Core_Page {
       3 => [$pushToken, 'String'],
     ]);
 
-    http_response_code(201);
+    http_response_code($isRegistered ? 200 : 201);
   }
 
   private function unregisterDevice($deviceId, $passTypeId, $serialNumber) {
@@ -161,26 +169,30 @@ class CRM_Wallet_Page_API extends CRM_Core_Page {
   }
 
   private function getSerialNumbers($deviceId, $passTypeId) {
-    // We only support one pass type for now, so we can ignore passTypeId filter strictly speaking,
-    // but we should check if passes exist for this device.
+    $expectedPassTypeId = \Civi::settings()->get('wallet_apple_pass_type_id');
+    if ($expectedPassTypeId && $passTypeId !== $expectedPassTypeId) {
+      http_response_code(404);
+      return;
+    }
 
-    // passesUpdatedSince is passed as query param
     $updatedSince = CRM_Utils_Request::retrieve('passesUpdatedSince', 'String');
+    if ($updatedSince !== NULL && $updatedSince !== '' && !ctype_digit($updatedSince)) {
+      http_response_code(400);
+      return;
+    }
 
     // Find all passes for this device
-    $sql = "SELECT p.serial_number, p.last_updated
+    $sql = "SELECT p.serial_number, UNIX_TIMESTAMP(p.last_updated) AS update_tag
             FROM civicrm_wallet_pass p
             JOIN civicrm_wallet_device d ON d.pass_id = p.id
-            WHERE d.device_library_identifier = %1";
+            WHERE d.device_library_identifier = %1
+              AND p.type = 'apple'";
 
     $params = [1 => [$deviceId, 'String']];
 
-    if ($updatedSince) {
-      $sql .= " AND p.last_updated > %2";
-      // Convert tag to date? Apple sends a tag. We use timestamp.
-      // If we used timestamp as tag, we can compare.
-      // Let's assume tag is timestamp.
-      $params[2] = [$updatedSince, 'String'];
+    if ($updatedSince !== NULL && $updatedSince !== '') {
+      $sql .= ' AND UNIX_TIMESTAMP(p.last_updated) > %2';
+      $params[2] = [(int) $updatedSince, 'Integer'];
     }
 
     $dao = CRM_Core_DAO::executeQuery($sql, $params);
@@ -189,7 +201,7 @@ class CRM_Wallet_Page_API extends CRM_Core_Page {
 
     while ($dao->fetch()) {
       $serialNumbers[] = $dao->serial_number;
-      $ts = strtotime($dao->last_updated);
+      $ts = (int) $dao->update_tag;
       if ($ts > $lastUpdated) {
         $lastUpdated = $ts;
       }
@@ -201,6 +213,7 @@ class CRM_Wallet_Page_API extends CRM_Core_Page {
       return;
     }
 
+    header('Content-Type: application/json');
     echo json_encode([
       'lastUpdated' => (string) $lastUpdated,
       'serialNumbers' => $serialNumbers,
@@ -268,7 +281,7 @@ class CRM_Wallet_Page_API extends CRM_Core_Page {
     if ($expectedPassTypeId && $passTypeId !== $expectedPassTypeId) {
       return NULL;
     }
-    $dao = CRM_Core_DAO::executeQuery("SELECT * FROM civicrm_wallet_pass WHERE serial_number = %1", [
+    $dao = CRM_Core_DAO::executeQuery("SELECT * FROM civicrm_wallet_pass WHERE serial_number = %1 AND type = 'apple'", [
       1 => [$serialNumber, 'String'],
     ]);
     if ($dao->fetch()) {
