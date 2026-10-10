@@ -1,30 +1,32 @@
 # CiviWallet - Apple & Google Wallet for CiviCRM
 
-Generate Apple Wallet (`.pkpass`) and Google Wallet passes for CiviCRM Event Participants.
-This extension automatically generates wallet passes including QR codes, event details, venue location, and custom styling.
+Generate Apple Wallet (`.pkpass`) and Google Wallet passes and QR codes for
+CiviCRM event participants, memberships, and donors. The extension supports
+event details, venue locations, membership validity, donor information, and
+custom styling.
 
 ## Repository
 
-[https://github.com/jonathandhn/CiviWallet](https://github.com/jonathandhn/CiviWallet)
+- Canonical repository: [CiviCRM GitLab](https://lab.civicrm.org/extensions/wallet)
+- GitHub mirror: [jonathandhn/CiviWallet](https://github.com/jonathandhn/CiviWallet)
 
 ## Release package
 
 Install the single scoped package named `one.jonathandhn.wallet.zip`. GitHub
 releases publish this file with its SHA-256 checksum. GitLab releases expose a
-stable project-relative download endpoint at:
+stable download endpoint at:
 
 ```text
-/-/releases/permalink/latest/downloads/wallet.zip
+https://lab.civicrm.org/extensions/wallet/-/releases/permalink/latest/downloads/wallet.zip
 ```
 
-The complete URL is the GitLab project URL followed by this path. Source-code
-archives are not installable release packages because they do not contain the
-scoped production dependencies.
+Source-code archives are not installable release packages because they do not
+contain the scoped production dependencies.
 
 ## Features
 
 - **Apple Wallet**: Generates signed `.pkpass` files used in Apple Wallet.
-- **Google Wallet**: Creates "Event Ticket" objects via Google Wallet API and generates "Save to Android Pay" links.
+- **Google Wallet**: Creates wallet objects through the Google Wallet API and generates "Add to Google Wallet" links.
 - **QR Codes**: Generates native QR Codes for emails and PDFs locally (no external dependencies). Event tickets can stay in simple PID-compatible mode or switch to a signed HMAC payload.
 - **Automatic Updates**: 
   - Updates Apple Wallet passes via Push Notifications when Event details change.
@@ -82,7 +84,7 @@ If your CiviCRM instance does not automatically generate `geo_code_1` (Latitude)
 
 ### Apple Wallet Setup
 
-To generate Apple Passes, you need an Apple Developer Account and a Pass Type Certicate.
+To generate Apple passes, you need an Apple Developer account and a Pass Type certificate.
 
 1. **Pass Type ID**: Register a Pass Type ID in your Apple Developer Console (e.g., `pass.org.example.event`).
 2. **Apple Team ID**: Your Apple Developer Team ID (10 chars).
@@ -94,7 +96,7 @@ To generate Apple Passes, you need an Apple Developer Account and a Pass Type Ce
 
 ### Google Wallet Setup
 
-To generate Google Passes, you need a Google Pay API for Passes account.
+To generate Google passes, you need access to the Google Wallet API.
 
 1. **Issuer ID**: Create a project in the [Google Pay & Wallet Console](https://pay.google.com/business/console). Note your Issuer ID (numeric).
 2. **Service Account**:
@@ -287,6 +289,18 @@ function myextension_civicrm_wallet_pass_alter(&$passData, $entityType, $entityI
 
 Wallet configuration fields are automatically hidden from public Event Info and Registration pages to keep the interface clean for participants. They are only visible to administrators in the backend.
 
+## Support the project
+
+CiviWallet is independently developed and currently has no institutional or
+corporate sponsor. If your organization benefits from this work, you can help
+fund its maintenance, documentation, Apple and Google Wallet compatibility
+testing, or future development.
+
+To sponsor work on CiviWallet or request professional support, please
+[visit Jonathan Dahan's website](https://www.jonathan.paris/en) or use the
+[contact form](https://www.jonathan.paris/en/contact).
+
 ## License
 
-AGPL-3.0
+CiviWallet is distributed under the
+[GNU Affero General Public License v3.0 or later](https://civicrm.org/extensions/LICENSE.txt).
