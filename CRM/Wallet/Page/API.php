@@ -9,7 +9,7 @@ class CRM_Wallet_Page_API extends CRM_Core_Page {
     $config = CRM_Core_Config::singleton();
     $config->debug = FALSE;
 
-    $uri = $_SERVER['REQUEST_URI'];
+    $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '';
     $method = $_SERVER['REQUEST_METHOD'];
 
     // Find the API path starting with /v1/ or /redirect
