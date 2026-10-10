@@ -63,7 +63,7 @@ class CRM_Wallet_PassType_Donor {
       $donationText .= "{$date} : {$amount}\n";
     }
     if (empty($donationText)) {
-      $donationText = E::ts("Aucun don récent");
+      $donationText = E::ts('No recent donations');
     }
 
     // Barcode Value
@@ -118,14 +118,14 @@ class CRM_Wallet_PassType_Donor {
         'secondaryFields' => [
                     [
                       'key' => 'status',
-                      'label' => E::ts('Statut'),
-                      'value' => E::ts('Donateur'),
+                      'label' => E::ts('Status'),
+                      'value' => E::ts('Donor'),
                     ],
         ],
         'backFields' => [
                     [
                       'key' => 'donations',
-                      'label' => E::ts('Derniers dons'),
+                      'label' => E::ts('Recent donations'),
                       'value' => $donationText,
                     ],
         ],
@@ -143,18 +143,18 @@ class CRM_Wallet_PassType_Donor {
     if ($donateUrl) {
       $passData['generic']['backFields'][] = [
         'key' => 'donate-link',
-        'label' => E::ts('Faire un nouveau don'),
+        'label' => E::ts('Make another donation'),
         'value' => $donateUrl,
-        'attributedValue' => "<a href='$donateUrl'>" . E::ts('Faire un don') . "</a>",
+        'attributedValue' => "<a href='$donateUrl'>" . E::ts('Donate') . "</a>",
       ];
     }
 
     if ($profileUrl) {
       $passData['generic']['backFields'][] = [
         'key' => 'profile-link',
-        'label' => E::ts('Mettre à jour mes coordonnées'),
+        'label' => E::ts('Update my details'),
         'value' => $profileUrl,
-        'attributedValue' => "<a href='$profileUrl'>" . E::ts('Mettre à jour mon profil') . "</a>",
+        'attributedValue' => "<a href='$profileUrl'>" . E::ts('Update my profile') . "</a>",
       ];
     }
 
@@ -209,7 +209,7 @@ class CRM_Wallet_PassType_Donor {
       $donationText .= "{$date} : {$amount}\n";
     }
     if (empty($donationText)) {
-      $donationText = E::ts("Aucun don récent");
+      $donationText = E::ts('No recent donations');
     }
 
     $issuerId = Civi::settings()->get('wallet_google_issuer_id');
@@ -296,8 +296,8 @@ class CRM_Wallet_PassType_Donor {
       'state' => 'ACTIVE',
       'cardTitle' => [
         'defaultValue' => [
-          'language' => 'fr-FR',
-          'value' => E::ts('Carte Donateur'),
+          'language' => civi_wallet_google_language_code(),
+          'value' => E::ts('Donor card'),
         ],
       ],
       'barcode' => [
@@ -308,7 +308,7 @@ class CRM_Wallet_PassType_Donor {
       'header' => [
         'defaultValue' => [
             // Ideally dynamic
-          'language' => 'fr-FR',
+          'language' => civi_wallet_google_language_code(),
           'value' => $orgName,
         ],
       ],
@@ -319,12 +319,12 @@ class CRM_Wallet_PassType_Donor {
                   'id' => 'name',
                 ],
                 [
-                  'header' => E::ts('Statut'),
-                  'body' => E::ts('Donateur'),
+                  'header' => E::ts('Status'),
+                  'body' => E::ts('Donor'),
                   'id' => 'status',
                 ],
                 [
-                  'header' => E::ts('Derniers dons'),
+                  'header' => E::ts('Recent donations'),
                   'body' => $donationText,
                   'id' => 'donations',
                 ],
@@ -335,14 +335,14 @@ class CRM_Wallet_PassType_Donor {
     if ($donateUrl) {
       $uris[] = [
         'uri' => $donateUrl,
-        'description' => E::ts('Faire un nouveau don'),
+        'description' => E::ts('Make another donation'),
         'id' => 'donate_link',
       ];
     }
     if ($profileUrl) {
       $uris[] = [
         'uri' => $profileUrl,
-        'description' => E::ts('Mettre à jour mes coordonnées'),
+        'description' => E::ts('Update my details'),
         'id' => 'profile_link',
       ];
     }

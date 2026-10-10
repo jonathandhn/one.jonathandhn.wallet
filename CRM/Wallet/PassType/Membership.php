@@ -32,7 +32,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
     $teamIdentifier = Civi::settings()->get('wallet_apple_team_id');
 
     $domain = \Civi\Api4\Domain::get(FALSE)->addWhere('id', '=', CRM_Core_Config::domainID())->execute()->first();
-    $orgName = Civi::settings()->get('wallet_org_name') ?: ($domain['name'] ?? E::ts('Organisation'));
+    $orgName = Civi::settings()->get('wallet_org_name') ?: ($domain['name'] ?? E::ts('Organization'));
 
     if (!$certPath || !file_exists($certPath)) {
       throw new Exception("Apple Wallet Certificate not configured.");
@@ -78,7 +78,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
 
     $bgColor = $isActive ? (Civi::settings()->get('wallet_color_membership_active') ?: 'rgb(83,180,89)') : (Civi::settings()->get('wallet_color_membership_expired') ?: 'rgb(160,160,160)');
 
-    $endDateStr = !empty($membership['end_date']) ? date('d M Y', strtotime($membership['end_date'])) : E::ts('À vie');
+    $endDateStr = !empty($membership['end_date']) ? date('d M Y', strtotime($membership['end_date'])) : E::ts('Lifetime');
 
     // Base URL for redirection
     $apiBaseUrl = rtrim(CRM_Utils_System::baseCMSURL(), '/') . '/civicrm/wallet/api/redirect';
@@ -87,7 +87,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
 
     // Prepare Pass Data Array using 'storeCard' model
     $passData = [
-      'description' => E::ts('Carte d\'adhérent %1', [1 => $orgName]),
+      'description' => E::ts('%1 membership card', [1 => $orgName]),
       'formatVersion' => 1,
       'organizationName' => $orgName,
       'passTypeIdentifier' => $passTypeIdentifier,
@@ -102,7 +102,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
         'primaryFields' => [
                     [
                       'key' => 'member-name',
-                      'label' => E::ts('Adhérent'),
+                      'label' => E::ts('Member'),
                       'value' => $contact['display_name'],
                     ],
         ],
@@ -114,31 +114,31 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
                     ],
                     [
                       'key' => 'membership-status',
-                      'label' => E::ts('Statut'),
+                      'label' => E::ts('Status'),
                       'value' => $status['label'],
-                      'changeMessage' => E::ts('Votre statut d\'adhésion a changé : %@'),
+                      'changeMessage' => E::ts('Your membership status changed: %@'),
                     ],
         ],
         'auxiliaryFields' => [
                     [
                       'key' => 'end-date',
-                      'label' => E::ts("Valide jusqu'au"),
+                      'label' => E::ts('Valid until'),
                       'value' => $endDateStr,
-                      'changeMessage' => E::ts("Votre adhésion a été prolongée jusqu'au %@"),
+                      'changeMessage' => E::ts('Your membership was extended until %@'),
                     ],
         ],
         'backFields' => [
                     [
                       'key' => 'renew-link',
-                      'label' => E::ts('Renouveler mon adhésion'),
+                      'label' => E::ts('Renew my membership'),
                       'value' => $renewUrl,
-                      'attributedValue' => "<a href='$renewUrl'>" . E::ts('Renouveler en un clic') . "</a>",
+                      'attributedValue' => "<a href='$renewUrl'>" . E::ts('Renew in one click') . "</a>",
                     ],
                     [
                       'key' => 'profile-link',
-                      'label' => E::ts('Mettre à jour mes coordonnées'),
+                      'label' => E::ts('Update my details'),
                       'value' => $profileUrl,
-                      'attributedValue' => "<a href='$profileUrl'>" . E::ts('Mettre à jour mon profil') . "</a>",
+                      'attributedValue' => "<a href='$profileUrl'>" . E::ts('Update my profile') . "</a>",
                     ],
         ],
       ],
@@ -206,7 +206,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
     $credentialsFile = Civi::settings()->get('wallet_google_credentials');
 
     $domain = \Civi\Api4\Domain::get(FALSE)->addWhere('id', '=', CRM_Core_Config::domainID())->execute()->first();
-    $orgName = Civi::settings()->get('wallet_org_name') ?: ($domain['name'] ?? 'Organisation');
+    $orgName = Civi::settings()->get('wallet_org_name') ?: ($domain['name'] ?? E::ts('Organization'));
     $websiteUrl = Civi::settings()->get('wallet_website_url');
     $contactUrl = Civi::settings()->get('wallet_contact_url');
 
@@ -247,7 +247,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
     $isActive = in_array($status['name'], ['New', 'Current', 'Grace']);
     $bgColor = $isActive ? (Civi::settings()->get('wallet_color_membership_active') ?: '#53b459') : (Civi::settings()->get('wallet_color_membership_expired') ?: '#a0a0a0');
 
-    $endDateStr = !empty($membership['end_date']) ? date('d M Y', strtotime($membership['end_date'])) : 'À vie';
+    $endDateStr = !empty($membership['end_date']) ? date('d M Y', strtotime($membership['end_date'])) : E::ts('Lifetime');
 
     // Prepare Class Metadata (LoyaltyClass)
     $classMetadata = [
@@ -318,11 +318,11 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
       ],
       'textModulesData' => [
                 [
-                  'header' => E::ts('Statut'),
+                  'header' => E::ts('Status'),
                   'body' => $status['label'],
                 ],
                 [
-                  'header' => E::ts("Valide jusqu'au"),
+                  'header' => E::ts('Valid until'),
                   'body' => $endDateStr,
                 ],
       ],
@@ -339,19 +339,19 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
     $uris = [];
     $uris[] = [
       'uri' => $renewUrl,
-      'description' => E::ts('Renouveler mon adhésion'),
+      'description' => E::ts('Renew my membership'),
       'id' => 'renew_link_v2',
     ];
     $uris[] = [
       'uri' => $profileUrl,
-      'description' => E::ts('Mettre à jour mon profil'),
+      'description' => E::ts('Update my profile'),
       'id' => 'profile_link_v2',
     ];
 
     if ($websiteUrl) {
       $uris[] = [
         'uri' => $websiteUrl,
-        'description' => E::ts('Site Internet'),
+        'description' => E::ts('Website'),
         'id' => 'website_link_v2',
       ];
     }

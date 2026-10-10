@@ -3,7 +3,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: one.jonathandhn.wallet\n"
-"PO-Revision-Date: 2026-06-29 13:20+0000\n"
+"PO-Revision-Date: 2026-10-10 23:45+0200\n"
 "Last-Translator: Jonathan Dahan <jonathan@dhn.one>\n"
 "Language-Team: fr_FR\n"
 "Language: fr_FR\n"
@@ -37,3 +37,93 @@ msgstr "Ajouter à Apple Wallet"
 
 msgid "Add to Google Wallet"
 msgstr "Ajouter à Google Wallet"
+
+msgid "Organization"
+msgstr "Organisation"
+
+msgid "VENUE"
+msgstr "LIEU"
+
+msgid "The venue changed: %@"
+msgstr "Le lieu a changé : %@"
+
+msgid "Organizer"
+msgstr "Organisateur"
+
+msgid "Information"
+msgstr "Informations"
+
+msgid "HOLDER"
+msgstr "TITULAIRE"
+
+msgid "TICKET"
+msgstr "BILLET"
+
+msgid "Your ticket was updated: %@"
+msgstr "Votre billet a été mis à jour : %@"
+
+msgid "The event changed: %@"
+msgstr "L'événement a changé : %@"
+
+msgid "The date changed: %@"
+msgstr "La date a changé : %@"
+
+msgid "TIME"
+msgstr "HEURE"
+
+msgid "Ticket"
+msgstr "Billet"
+
+msgid "Lifetime"
+msgstr "À vie"
+
+msgid "%1 membership card"
+msgstr "Carte d'adhérent %1"
+
+msgid "Member"
+msgstr "Adhérent"
+
+msgid "Status"
+msgstr "Statut"
+
+msgid "Your membership status changed: %@"
+msgstr "Votre statut d'adhésion a changé : %@"
+
+msgid "Valid until"
+msgstr "Valide jusqu'au"
+
+msgid "Your membership was extended until %@"
+msgstr "Votre adhésion a été prolongée jusqu'au %@"
+
+msgid "Renew my membership"
+msgstr "Renouveler mon adhésion"
+
+msgid "Renew in one click"
+msgstr "Renouveler en un clic"
+
+msgid "Update my details"
+msgstr "Mettre à jour mes coordonnées"
+
+msgid "Update my profile"
+msgstr "Mettre à jour mon profil"
+
+msgid "Website"
+msgstr "Site Internet"
+
+msgid "No recent donations"
+msgstr "Aucun don récent"
+
+msgid "Donor"
+msgstr "Donateur"
+
+msgid "Recent donations"
+msgstr "Derniers dons"
+
+msgid "Make another donation"
+msgstr "Faire un nouveau don"
+
+msgid "Donate"
+msgstr "Faire un don"
+
+msgid "Donor card"
+msgstr "Carte de donateur"

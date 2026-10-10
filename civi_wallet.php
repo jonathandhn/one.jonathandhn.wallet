@@ -445,6 +445,10 @@ function civi_wallet_generate_donor_barcode($contactId) {
   return $barcodeValue !== '' ? $barcodeValue : (string) $contactId;
 }
 
+function civi_wallet_google_language_code() {
+  return str_replace('_', '-', CRM_Core_I18n::getLocale());
+}
+
 /**
  * Implements hook_civicrm_alterMenu().
  *

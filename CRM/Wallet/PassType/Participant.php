@@ -21,7 +21,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
     $passTypeIdentifier = Civi::settings()->get('wallet_apple_pass_type_id');
     $teamIdentifier = Civi::settings()->get('wallet_apple_team_id');
     $domain = \Civi\Api4\Domain::get(FALSE)->addWhere('id', '=', CRM_Core_Config::domainID())->execute()->first();
-    $defaultOrgName = $domain['name'] ?? E::ts('Organisation');
+    $defaultOrgName = $domain['name'] ?? E::ts('Organization');
     $defaultUrl = CRM_Utils_System::baseCMSURL();
 
     $orgName = Civi::settings()->get('wallet_org_name') ?: $defaultOrgName;
@@ -122,9 +122,9 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
     if ($venueName || $venueAddress) {
       $backFields[] = [
         'key' => 'venue-info',
-        'label' => $venueName ?: E::ts('LIEU'),
+        'label' => $venueName ?: E::ts('VENUE'),
         'value' => $venueAddress ?: $venueName,
-        'changeMessage' => E::ts('Le lieu a changé : %@'),
+        'changeMessage' => E::ts('The venue changed: %@'),
       ];
     }
 
@@ -138,14 +138,14 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
 
     $backFields[] = [
       'key' => 'organizer-name',
-      'label' => E::ts('Organisateur'),
+      'label' => E::ts('Organizer'),
       'value' => $orgName,
     ];
 
     if ($websiteUrl) {
       $backFields[] = [
         'key' => 'website',
-        'label' => E::ts('Informations'),
+        'label' => E::ts('Information'),
         'value' => $websiteUrl,
         'attributedValue' => "<a href='$websiteUrl'>$websiteUrl</a>",
       ];
@@ -163,7 +163,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
     $auxiliaryFields = [
             [
               'key' => 'participant-name',
-              'label' => E::ts('TITULAIRE'),
+              'label' => E::ts('HOLDER'),
               'value' => $contact['display_name'],
             ],
     ];
@@ -172,9 +172,9 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
       $feeLevel = is_array($participant['fee_level']) ? implode(', ', $participant['fee_level']) : $participant['fee_level'];
       $auxiliaryFields[] = [
         'key' => 'fee-level',
-        'label' => E::ts('BILLET'),
+        'label' => E::ts('TICKET'),
         'value' => strip_tags(str_replace('&nbsp;', ' ', $feeLevel)),
-        'changeMessage' => E::ts('Votre billet a été mis à jour : %@'),
+        'changeMessage' => E::ts('Your ticket was updated: %@'),
       ];
     }
 
@@ -196,7 +196,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
                       'key' => 'event-name',
                       'label' => $venueName,
                       'value' => $event['title'],
-                      'changeMessage' => E::ts("L'événement a changé : %@"),
+                      'changeMessage' => E::ts('The event changed: %@'),
                     ],
         ],
         'secondaryFields' => [
@@ -205,11 +205,11 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
                       'label' => E::ts('DATE'),
                       'value' => date('d M Y', strtotime($event['start_date'])),
                       'textAlignment' => 'PKTextAlignmentLeft',
-                      'changeMessage' => E::ts('La date a changé : %@'),
+                      'changeMessage' => E::ts('The date changed: %@'),
                     ],
                     [
                       'key' => 'start-time',
-                      'label' => E::ts('HEURE'),
+                      'label' => E::ts('TIME'),
                       'value' => date('H:i', strtotime($event['start_date'])),
                       'textAlignment' => 'PKTextAlignmentRight',
                     ],
@@ -307,7 +307,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
 
     $issuerId = Civi::settings()->get('wallet_google_issuer_id');
     $credentialsFile = Civi::settings()->get('wallet_google_credentials');
-    $orgName = Civi::settings()->get('wallet_org_name') ?: E::ts('Organisation');
+    $orgName = Civi::settings()->get('wallet_org_name') ?: E::ts('Organization');
     $websiteUrl = Civi::settings()->get('wallet_website_url');
     $contactUrl = Civi::settings()->get('wallet_contact_url');
 
@@ -441,7 +441,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
       'issuerName' => $orgName,
       'eventName' => [
         'defaultValue' => [
-          'language' => 'fr',
+          'language' => civi_wallet_google_language_code(),
           'value' => $event['title'],
         ],
       ],
@@ -496,13 +496,13 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
       $classMetadata['venue'] = [
         'name' => [
           'defaultValue' => [
-            'language' => 'fr',
+            'language' => civi_wallet_google_language_code(),
             'value' => $venueName,
           ],
         ],
         'address' => [
           'defaultValue' => [
-            'language' => 'fr',
+            'language' => civi_wallet_google_language_code(),
             'value' => $venueAddress,
           ],
         ],
@@ -532,7 +532,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
 
     $textModulesData = [
             [
-              'header' => E::ts('Organisateur'),
+              'header' => E::ts('Organizer'),
               'body' => $orgName,
             ],
     ];
@@ -540,7 +540,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
     if (!empty($participant['fee_level'])) {
       $feeLevel = is_array($participant['fee_level']) ? implode(', ', $participant['fee_level']) : $participant['fee_level'];
       $textModulesData[] = [
-        'header' => E::ts('Billet'),
+        'header' => E::ts('Ticket'),
         'body' => strip_tags(str_replace('&nbsp;', ' ', $feeLevel)),
       ];
     }
