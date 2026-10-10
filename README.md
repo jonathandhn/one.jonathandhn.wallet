@@ -123,37 +123,41 @@ The extension adds a **Wallet** tab on Event configuration pages for event-level
 - Apple Wallet, Google Wallet, and local event QR images all use the same participant QR payload mode.
 
 HTML composite tokens:
-- `{contact.wallet_links}`: Membership Apple/Google buttons as HTML.
-- `{participant.wallet_links}`: Event ticket Apple/Google buttons as HTML.
-- `{contact.wallet_links_donor}`: Donor card Apple/Google buttons as HTML.
-- `{contact.qr_membership}`: Membership QR code as an HTML `<img>` tag.
-- `{participant.qr_participant}`: Event ticket QR code as an HTML `<img>` tag.
-- `{contact.qr_donor}`: Donor QR code as an HTML `<img>` tag.
+- `{wallet.membership_links}`: Membership Apple/Google buttons as HTML.
+- `{wallet.participant_links}`: Event ticket Apple/Google buttons as HTML.
+- `{wallet.donor_links}`: Donor card Apple/Google buttons as HTML.
+- `{wallet.membership_qr}`: Membership QR code as an HTML `<img>` tag.
+- `{wallet.participant_qr}`: Event ticket QR code as an HTML `<img>` tag.
+- `{wallet.donor_qr}`: Donor QR code as an HTML `<img>` tag.
+- `{wallet.contact_qr}`: Contact pass QR code as an HTML `<img>` tag.
 
 Raw membership tokens:
-- `{contact.wallet_apple_membership_url}`: Apple Wallet URL for a membership card.
-- `{contact.wallet_google_membership_url}`: Google Wallet URL for a membership card.
-- `{contact.qr_membership_url}`: Raw QR image URL for a membership card.
+- `{wallet.membership_apple_url}`: Apple Wallet URL for a membership card.
+- `{wallet.membership_google_url}`: Google Wallet URL for a membership card.
+- `{wallet.membership_qr_url}`: Raw QR image URL for a membership card.
 
 Raw donor tokens:
-- `{contact.wallet_apple_donor_url}`: Apple Wallet URL for a donor card.
-- `{contact.wallet_google_donor_url}`: Google Wallet URL for a donor card.
-- `{contact.qr_donor_url}`: Raw QR image URL for a donor card.
+- `{wallet.donor_apple_url}`: Apple Wallet URL for a donor card.
+- `{wallet.donor_google_url}`: Google Wallet URL for a donor card.
+- `{wallet.donor_qr_url}`: Raw QR image URL for a donor card.
 
 Raw participant tokens:
-- `{participant.wallet_apple_url}`: Apple Wallet URL for an event ticket.
-- `{participant.wallet_google_url}`: Google Wallet URL for an event ticket.
-- `{participant.qr_participant_url}`: Raw QR image URL for an event ticket.
+- `{wallet.participant_apple_url}`: Apple Wallet URL for an event ticket.
+- `{wallet.participant_google_url}`: Google Wallet URL for an event ticket.
+- `{wallet.participant_qr_url}`: Raw QR image URL for an event ticket.
+
+Raw contact pass token:
+- `{wallet.contact_qr_url}`: Raw QR image URL for a contact pass or badge.
 
 - The raw URL tokens are intended for custom MJML/HTML templates where you want to place Apple, Google, or QR assets independently.
-- Event confirmation templates may URL-encode raw participant URL tokens when they are inserted directly inside an HTML attribute. In that context, prefer `{participant.qr_participant}` unless you have confirmed the template keeps raw `{...}` token syntax intact in source mode.
-- Event reminder templates must use the full participant token name, for example `{participant.qr_participant}` or `{participant.qr_participant_url}`. A malformed token such as `{qr_participant.}` is invalid Smarty syntax and will fail before token replacement.
+- Event confirmation templates may URL-encode raw participant URL tokens when they are inserted directly inside an HTML attribute. In that context, prefer `{wallet.participant_qr}` unless you have confirmed the template keeps raw `{...}` token syntax intact in source mode.
+- Event reminder templates must use the full participant token name, for example `{wallet.participant_qr}` or `{wallet.participant_qr_url}`. A malformed token such as `{wallet.participant_qr.}` is invalid Smarty syntax and will fail before token replacement.
 - Participant tokens are intentionally empty in generic contact context to avoid resolving the wrong registration when a contact has multiple event participations.
 - Tokens are only exposed in CiviCRM auto-complete when their underlying context and channel are enabled. For example, if Apple and Google are off, wallet-link tokens are hidden; if `membership` or `donor` are off, those token families are hidden as well.
 - Scanning the QR Code on the pass allows check-in. Simple mode works with any PID-aware scanner. Signed mode stays compatible with PID extraction, and CiviScan session mode can additionally verify the HMAC signature server-side.
 
 ### Donor Cards
-You can generate a pure Donor card for any Contact using the `{contact.wallet_links_donor}` token. 
+You can generate a pure Donor card for any Contact using the `{wallet.donor_links}` token.
 This card is independent of memberships. By default, it automatically fetches and displays the last 3 completed Contributions (Donations) on the back of the Apple Pass or as text modules on the Google Pass, along with quick links to update their profile or make a new donation.
 
 ## Maintenance
