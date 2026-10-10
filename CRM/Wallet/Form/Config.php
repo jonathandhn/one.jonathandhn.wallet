@@ -20,6 +20,7 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
     'wallet_org_description' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
     'wallet_color_background' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
     'wallet_color_foreground' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
+    'wallet_color_qr_background' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
     'wallet_color_label' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
     'wallet_image_icon' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
     'wallet_image_logo' => CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
@@ -99,6 +100,7 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
     // --- Graphics Settings ---
     $this->add('text', 'wallet_color_background', E::ts('Background Color'), ['type' => 'color', 'placeholder' => '#ea148c']);
     $this->add('text', 'wallet_color_foreground', E::ts('Foreground Color'), ['type' => 'color', 'placeholder' => '#ffffff']);
+    $this->add('text', 'wallet_color_qr_background', E::ts('QR Code Background Color'), ['type' => 'color', 'placeholder' => '#ffffff']);
     $this->add('text', 'wallet_color_label', E::ts('Label Color'), ['type' => 'color', 'placeholder' => '#ffffff']);
 
     $this->add('file', 'wallet_image_icon_upload', E::ts('Icon (icon.png)'));
@@ -208,6 +210,7 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
       'wallet_contact_url',
       'wallet_color_background',
       'wallet_color_foreground',
+      'wallet_color_qr_background',
       'wallet_color_label',
       'wallet_color_membership_active',
       'wallet_color_membership_expired',

@@ -135,6 +135,13 @@
         {$form.wallet_color_foreground.html}
       </td>
     </tr>
+    <tr class="crm-wallet-color-qr-background-form-block-wallet_color_qr_background">
+      <td colspan="2">
+        <label class="wallet-field-label" for="wallet_color_qr_background">{ts}QR Code Background Color{/ts}</label>
+        {$form.wallet_color_qr_background.html}
+        <div class="description">{ts}Used as an opaque background so QR codes remain readable in dark mode.{/ts}</div>
+      </td>
+    </tr>
     <tr class="crm-wallet-color-label-form-block-wallet_color_label">
       <td colspan="2">
         <label class="wallet-field-label" for="wallet_color_label">{ts}Label Color{/ts}</label>

@@ -38,6 +38,12 @@ msgstr "Ajouter à Apple Wallet"
 msgid "Add to Google Wallet"
 msgstr "Ajouter à Google Wallet"
 
+msgid "QR Code Background Color"
+msgstr "Couleur de fond du QR code"
+
+msgid "Used as an opaque background so QR codes remain readable in dark mode."
+msgstr "Utilisée comme fond opaque afin que les QR codes restent lisibles en mode sombre."
+
 msgid "Organization"
 msgstr "Organisation"
 

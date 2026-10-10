@@ -229,6 +229,12 @@ function civi_wallet_get_qr_color() {
   return $luminance > 200 ? '000000' : strtolower($color);
 }
 
+function civi_wallet_get_qr_background_color() {
+  $color = ltrim((string) (Civi::settings()->get('wallet_color_qr_background') ?: 'ffffff'), '#');
+
+  return strlen($color) === 6 && ctype_xdigit($color) ? strtolower($color) : 'ffffff';
+}
+
 function civi_wallet_is_channel_enabled($channel) {
   $map = [
     'apple' => 'wallet_channel_apple_enabled',

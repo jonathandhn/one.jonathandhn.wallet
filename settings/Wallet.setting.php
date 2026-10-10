@@ -227,6 +227,18 @@ return [
     'is_contact' => 0,
     'description' => 'Pass Foreground Color',
   ],
+  'wallet_color_qr_background' => [
+    'group_name' => 'CiviWallet Settings',
+    'group' => 'civi_wallet',
+    'name' => 'wallet_color_qr_background',
+    'type' => 'String',
+    'html_type' => 'text',
+    'default' => '#ffffff',
+    'add' => '1.6',
+    'is_domain' => 1,
+    'is_contact' => 0,
+    'description' => 'QR Code Background Color',
+  ],
   'wallet_color_label' => [
     'group_name' => 'CiviWallet Settings',
     'group' => 'civi_wallet',

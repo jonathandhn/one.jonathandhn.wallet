@@ -188,6 +188,7 @@ class ParticipantTokenSubscriber extends AutoService implements EventSubscriberI
 
       $cs = $cid ? \CRM_Contact_BAO_Contact_Utils::generateChecksum((int) $cid) : '';
       $color = civi_wallet_get_qr_color();
+      $background = civi_wallet_get_qr_background_color();
 
       // Evaluate Participant Tokens
       if ($pid && !empty($participantTokens)) {
@@ -210,7 +211,7 @@ class ParticipantTokenSubscriber extends AutoService implements EventSubscriberI
         }
 
         if (civi_wallet_is_context_enabled('participant') && civi_wallet_is_channel_enabled('qr') && $cid) {
-          $participantQrUrl = \CRM_Utils_System::url('civicrm/wallet/api/qr', "entity=participant&pid={$pid}&cs={$cs}&color={$color}", TRUE, NULL, FALSE, TRUE);
+          $participantQrUrl = \CRM_Utils_System::url('civicrm/wallet/api/qr', "entity=participant&pid={$pid}&cs={$cs}&color={$color}&background={$background}", TRUE, NULL, FALSE, TRUE);
         }
 
         if (in_array('wallet_links', $participantTokens, TRUE)) {
@@ -254,7 +255,7 @@ class ParticipantTokenSubscriber extends AutoService implements EventSubscriberI
           $htmlMembership .= "<a href='{$membershipGoogleUrl}' style='{$btnStyleGoogle}'>" . ts('Add to Google Wallet') . "</a>";
         }
         if (civi_wallet_is_context_enabled('membership') && civi_wallet_is_channel_enabled('qr')) {
-          $membershipQrUrl = \CRM_Utils_System::url('civicrm/wallet/api/qr', "entity=membership&cid={$cid}&cs={$cs}&color={$color}", TRUE, NULL, FALSE, TRUE);
+          $membershipQrUrl = \CRM_Utils_System::url('civicrm/wallet/api/qr', "entity=membership&cid={$cid}&cs={$cs}&color={$color}&background={$background}", TRUE, NULL, FALSE, TRUE);
         }
 
         if (in_array('wallet_links', $contactTokens, TRUE)) {
@@ -295,7 +296,7 @@ class ParticipantTokenSubscriber extends AutoService implements EventSubscriberI
           $htmlDonor .= "<a href='{$donorGoogleUrl}' style='{$btnStyleGoogle}'>" . ts('Add to Google Wallet') . "</a>";
         }
         if (civi_wallet_is_context_enabled('donor') && civi_wallet_is_channel_enabled('qr')) {
-          $donorQrUrl = \CRM_Utils_System::url('civicrm/wallet/api/qr', "entity=donor&cid={$cid}&cs={$cs}&color={$color}", TRUE, NULL, FALSE, TRUE);
+          $donorQrUrl = \CRM_Utils_System::url('civicrm/wallet/api/qr', "entity=donor&cid={$cid}&cs={$cs}&color={$color}&background={$background}", TRUE, NULL, FALSE, TRUE);
         }
 
         if (in_array('wallet_links_donor', $contactTokens, TRUE)) {
@@ -319,7 +320,7 @@ class ParticipantTokenSubscriber extends AutoService implements EventSubscriberI
           $row->format('text/plain')->tokens('contact', 'qr_donor_url', $donorQrUrl);
         }
 
-        $contactPassQrUrl = \CRM_Utils_System::url('civicrm/wallet/api/qr', "entity=contact&cid={$cid}&cs={$cs}&color={$color}", TRUE, NULL, FALSE, TRUE);
+        $contactPassQrUrl = \CRM_Utils_System::url('civicrm/wallet/api/qr', "entity=contact&cid={$cid}&cs={$cs}&color={$color}&background={$background}", TRUE, NULL, FALSE, TRUE);
         if (in_array('qr_contact_pass', $contactTokens, TRUE)) {
           $row->format('text/html')->tokens('contact', 'qr_contact_pass', "<img src='{$contactPassQrUrl}' width='150' height='150' alt='" . ts('QR Code') . "'>");
           $row->format('text/plain')->tokens('contact', 'qr_contact_pass', $contactPassQrUrl);

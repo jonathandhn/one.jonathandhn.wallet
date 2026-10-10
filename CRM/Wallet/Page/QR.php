@@ -41,6 +41,33 @@ class CRM_Wallet_Page_QR extends CRM_Core_Page {
     return $luminance > 200 ? '000000' : strtolower($colorHex);
   }
 
+  private function normalizeBackgroundColor($colorHex) {
+    $colorHex = ltrim((string) $colorHex, '#');
+
+    return strlen($colorHex) === 6 && ctype_xdigit($colorHex) ? strtolower($colorHex) : 'ffffff';
+  }
+
+  private function relativeLuminance($colorHex) {
+    $channels = [];
+    foreach ([0, 2, 4] as $offset) {
+      $channel = hexdec(substr($colorHex, $offset, 2)) / 255;
+      $channels[] = $channel <= 0.04045 ? $channel / 12.92 : (($channel + 0.055) / 1.055) ** 2.4;
+    }
+
+    return (0.2126 * $channels[0]) + (0.7152 * $channels[1]) + (0.0722 * $channels[2]);
+  }
+
+  private function ensureQrContrast($foreground, $background) {
+    $foregroundLuminance = $this->relativeLuminance($foreground);
+    $backgroundLuminance = $this->relativeLuminance($background);
+    $contrast = (max($foregroundLuminance, $backgroundLuminance) + 0.05)
+      / (min($foregroundLuminance, $backgroundLuminance) + 0.05);
+
+    return $foregroundLuminance < $backgroundLuminance && $contrast >= 4.5
+      ? [$foreground, $background]
+      : ['000000', 'ffffff'];
+  }
+
   private function resolveParticipantById($participantId) {
     $dao = CRM_Core_DAO::executeQuery(
         'SELECT id, contact_id, event_id FROM civicrm_participant WHERE id = %1 LIMIT 1',
@@ -65,7 +92,10 @@ class CRM_Wallet_Page_QR extends CRM_Core_Page {
     $entity = CRM_Utils_Request::retrieve('entity', 'String', CRM_Core_DAO::$_nullObject, TRUE);
     $hash = CRM_Utils_Request::retrieve('cs', 'String', CRM_Core_DAO::$_nullObject, FALSE, '');
     $colorHex = CRM_Utils_Request::retrieve('color', 'String', CRM_Core_DAO::$_nullObject, FALSE, '000000');
+    $backgroundHex = CRM_Utils_Request::retrieve('background', 'String', CRM_Core_DAO::$_nullObject, FALSE, 'ffffff');
     $colorHex = $this->normalizeQrColor($colorHex);
+    $backgroundHex = $this->normalizeBackgroundColor($backgroundHex);
+    [$colorHex, $backgroundHex] = $this->ensureQrContrast($colorHex, $backgroundHex);
 
     if (!in_array($entity, ['participant', 'membership', 'donor', 'contact'], TRUE) || !$this->isQrEnabled() || !$this->isContextEnabled($entity)) {
       CRM_Utils_System::permissionDenied();
@@ -174,7 +204,12 @@ class CRM_Wallet_Page_QR extends CRM_Core_Page {
       'eccLevel'         => EccLevel::M,
       'scale'            => 10,
       'outputBase64'     => FALSE,
-      'imageTransparent' => TRUE,
+      'imageTransparent' => FALSE,
+      'bgColor'          => [
+        hexdec(substr($backgroundHex, 0, 2)),
+        hexdec(substr($backgroundHex, 2, 2)),
+        hexdec(substr($backgroundHex, 4, 2)),
+      ],
     ]);
 
     if (!empty($colorHex) && strlen($colorHex) === 6 && ctype_xdigit($colorHex)) {
