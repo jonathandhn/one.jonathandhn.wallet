@@ -1,0 +1,17 @@
+<?php
+
+namespace Civi\Token;
+
+class TokenProcessor {
+
+  /**
+   * CiviCRM 6.16 documents the concrete dispatcher even though the constructor
+   * stores and accepts the dispatcher interface returned by Civi::dispatcher().
+   *
+   * @param object $dispatcher
+   * @param array<mixed> $context
+   */
+  public function __construct($dispatcher, $context) {
+  }
+
+}

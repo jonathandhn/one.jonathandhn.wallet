@@ -47,8 +47,7 @@ class CRM_Wallet_Utils_Url {
    * because some CMS stacks interfere with HTTP verbs on routed endpoints.
    */
   public static function webrootScript(string $scriptName = 'civi-wallet-api.php'): string {
-    $config = CRM_Core_Config::singleton();
-    $baseUrl = $config->userFrameworkBaseURL ?: CRM_Utils_System::baseCMSURL();
+    $baseUrl = CRM_Utils_System::baseURL() ?: CRM_Utils_System::baseCMSURL();
     return rtrim($baseUrl, '/') . '/' . ltrim($scriptName, '/');
   }
 

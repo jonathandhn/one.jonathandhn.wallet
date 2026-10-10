@@ -143,6 +143,26 @@ This card is independent of memberships. By default, it automatically fetches an
 
 ## Maintenance
 
+### Development checks
+
+The local quality gate checks maintained extension code with Civilint and
+PHPStan level 5 against CiviCRM 6.16:
+
+```bash
+composer check
+```
+
+The command expects sibling checkouts named `civicrm-buildkit` and
+`civicrm-standalone`. Set `CIVICRM_BUILDKIT` when buildkit is installed in a
+different location. Generated Civix, DAO, APIv4, and upgrader files are not
+rewritten by the formatting command.
+
+To apply Civilint's mechanical fixes to maintained files:
+
+```bash
+composer civilint:fix
+```
+
 ### Force a pass update
 
 You can enqueue a manual refresh with `cv ev`:

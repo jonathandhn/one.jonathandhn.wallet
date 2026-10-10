@@ -45,3 +45,4 @@ dist/
 dist-bundled/
 one.jonathandhn.wallet.zip
 one.jonathandhn.wallet/
+.cache/
