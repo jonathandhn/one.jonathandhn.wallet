@@ -59,7 +59,7 @@ cp extensions/one.jonathandhn.wallet/extern/api.php /path/to/webroot/civi-wallet
 
 You can test the public endpoint without an Apple device by using an existing
 Apple pass record. The simulator verifies registration, update polling, pass
-download, the modern `barcodes` payload, logging, and unregistration. It does
+download, the current `barcodes` and `relevantDates` payloads, logging, and unregistration. It does
 not validate delivery through APNs because it uses a synthetic push token.
 
 ```bash

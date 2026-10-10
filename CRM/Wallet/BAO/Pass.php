@@ -149,6 +149,9 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO {
       }
     }
 
+    // Publish the new update tag before notifying Apple devices.
+    CRM_Core_DAO::executeQuery("UPDATE civicrm_wallet_pass SET last_updated = NOW() WHERE entity_table = %1 AND entity_id = %2", [1 => [$entityTable, 'String'], 2 => [$entityId, 'Integer']]);
+
     // 2. Update Apple Wallet (Push Notification)
     if (self::isChannelEnabled('apple') && self::isEntityTableEnabled($entityTable)) {
       $dao = CRM_Core_DAO::executeQuery("
@@ -162,9 +165,6 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO {
         self::sendApplePushNotification($dao->push_token);
       }
     }
-
-    // Update last_updated timestamp
-    CRM_Core_DAO::executeQuery("UPDATE civicrm_wallet_pass SET last_updated = NOW() WHERE entity_table = %1 AND entity_id = %2", [1 => [$entityTable, 'String'], 2 => [$entityId, 'Integer']]);
 
     return TRUE;
   }

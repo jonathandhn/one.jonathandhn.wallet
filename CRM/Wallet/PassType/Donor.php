@@ -127,6 +127,7 @@ class CRM_Wallet_PassType_Donor {
                       'key' => 'donations',
                       'label' => E::ts('Recent donations'),
                       'value' => $donationText,
+                      'changeMessage' => E::ts('Your recent donations were updated: %@'),
                     ],
         ],
       ],
@@ -224,40 +225,41 @@ class CRM_Wallet_PassType_Donor {
     $client->setAuthConfig(Civi::settings()->get('wallet_google_credentials'));
     $service = new \Google\Service\Walletobjects($client);
 
-    // Ensure Class Exists
+    $classMetadata = [
+      'id' => $classId,
+      'classTemplateInfo' => [
+        'cardTemplateOverride' => [
+          'cardRowTemplateInfos' => [
+                        [
+                          'twoItems' => [
+                            'startItem' => [
+                              'firstValue' => [
+                                'fields' => [
+                                            ['fieldPath' => "object.textModulesData['name']"],
+                                ],
+                              ],
+                            ],
+                            'endItem' => [
+                              'firstValue' => [
+                                'fields' => [
+                                            ['fieldPath' => "object.textModulesData['status']"],
+                                ],
+                              ],
+                            ],
+                          ],
+                        ],
+          ],
+        ],
+      ],
+    ];
+    $classObj = new \Google\Service\Walletobjects\GenericClass($classMetadata);
+
     try {
       $service->genericclass->get($classId);
+      $service->genericclass->patch($classId, $classObj);
     }
     catch (\Google\Service\Exception $e) {
       if ($e->getCode() == 404) {
-        $classMetadata = [
-          'id' => $classId,
-          'classTemplateInfo' => [
-            'cardTemplateOverride' => [
-              'cardRowTemplateInfos' => [
-                                [
-                                  'twoItems' => [
-                                    'startItem' => [
-                                      'firstValue' => [
-                                        'fields' => [
-                                                    ['fieldPath' => "object.textModulesData['name']"],
-                                        ],
-                                      ],
-                                    ],
-                                    'endItem' => [
-                                      'firstValue' => [
-                                        'fields' => [
-                                                    ['fieldPath' => "object.textModulesData['status']"],
-                                        ],
-                                      ],
-                                    ],
-                                  ],
-                                ],
-              ],
-            ],
-          ],
-        ];
-        $classObj = new \Google\Service\Walletobjects\GenericClass($classMetadata);
         $service->genericclass->insert($classObj);
       }
       else {
@@ -359,7 +361,7 @@ class CRM_Wallet_PassType_Donor {
 
     try {
       $service->genericobject->get($objectId);
-      $service->genericobject->update($objectId, $objectObj);
+      $service->genericobject->patch($objectId, $objectObj);
     }
     catch (\Google\Service\Exception $e) {
       if ($e->getCode() == 404) {

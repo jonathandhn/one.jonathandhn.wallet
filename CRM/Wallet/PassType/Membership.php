@@ -74,7 +74,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
 
     // Colors
     $status = \Civi\Api4\MembershipStatus::get(FALSE)->addWhere('id', '=', $membership['status_id'])->execute()->first();
-    $isActive = in_array($status['name'], ['New', 'Current', 'Grace']);
+    $isActive = !empty($status['is_current_member']);
 
     $bgColor = $isActive ? (Civi::settings()->get('wallet_color_membership_active') ?: 'rgb(83,180,89)') : (Civi::settings()->get('wallet_color_membership_expired') ?: 'rgb(160,160,160)');
 
@@ -111,6 +111,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
                       'key' => 'membership-type',
                       'label' => E::ts('Type'),
                       'value' => $membershipType['name'],
+                      'changeMessage' => E::ts('Your membership type changed: %@'),
                     ],
                     [
                       'key' => 'membership-status',
@@ -244,8 +245,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
     $logoUrl = $extUrl . '/resources/images/icon.png?v=' . $timestamp;
     $heroUrl = $extUrl . '/resources/images/logo.png?v=' . $timestamp;
 
-    $isActive = in_array($status['name'], ['New', 'Current', 'Grace']);
-    $bgColor = $isActive ? (Civi::settings()->get('wallet_color_membership_active') ?: '#53b459') : (Civi::settings()->get('wallet_color_membership_expired') ?: '#a0a0a0');
+    $isActive = !empty($status['is_current_member']);
 
     $endDateStr = !empty($membership['end_date']) ? date('d M Y', strtotime($membership['end_date'])) : E::ts('Lifetime');
 
@@ -261,14 +261,15 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
         'sourceUri' => ['uri' => $heroUrl],
       ],
       'reviewStatus' => 'UNDER_REVIEW',
-      'hexBackgroundColor' => $bgColor,
+      'notifyPreference' => 'NOTIFY_ON_UPDATE',
+      'hexBackgroundColor' => Civi::settings()->get('wallet_color_background') ?: '#53b459',
     ];
 
     $classObj = new \Google\Service\Walletobjects\LoyaltyClass($classMetadata);
 
     try {
       $service->loyaltyclass->get($classId);
-      $service->loyaltyclass->update($classId, $classObj);
+      $service->loyaltyclass->patch($classId, $classObj);
     }
     catch (\Google\Service\Exception $e) {
       if ($e->getCode() == 404) {
@@ -302,7 +303,8 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
     $objectMetadata = [
       'id' => $objectId,
       'classId' => $classId,
-      'state' => 'ACTIVE',
+      'state' => $isActive ? 'ACTIVE' : 'INACTIVE',
+      'notifyPreference' => 'NOTIFY_ON_UPDATE',
       'accountId' => (string) $contactId,
       'accountName' => $contact['display_name'],
       'barcode' => [
@@ -374,7 +376,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
 
     try {
       $service->loyaltyobject->get($objectId);
-      $service->loyaltyobject->update($objectId, $objectObj);
+      $service->loyaltyobject->patch($objectId, $objectObj);
     }
     catch (\Google\Service\Exception $e) {
       if ($e->getCode() == 404) {

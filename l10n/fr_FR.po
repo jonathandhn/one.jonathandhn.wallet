@@ -3,7 +3,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: one.jonathandhn.wallet\n"
-"PO-Revision-Date: 2026-10-10 23:45+0200\n"
+"PO-Revision-Date: 2026-10-11 00:00+0200\n"
 "Last-Translator: Jonathan Dahan <jonathan@dhn.one>\n"
 "Language-Team: fr_FR\n"
 "Language: fr_FR\n"
@@ -68,6 +68,9 @@ msgstr "L'événement a changé : %@"
 msgid "The date changed: %@"
 msgstr "La date a changé : %@"
 
+msgid "The event time changed: %@"
+msgstr "L'heure de l'événement a changé : %@"
+
 msgid "TIME"
 msgstr "HEURE"
 
@@ -88,6 +91,9 @@ msgstr "Statut"
 
 msgid "Your membership status changed: %@"
 msgstr "Votre statut d'adhésion a changé : %@"
+
+msgid "Your membership type changed: %@"
+msgstr "Votre type d'adhésion a changé : %@"
 
 msgid "Valid until"
 msgstr "Valide jusqu'au"
@@ -118,6 +124,9 @@ msgstr "Donateur"
 
 msgid "Recent donations"
 msgstr "Derniers dons"
+
+msgid "Your recent donations were updated: %@"
+msgstr "Vos derniers dons ont été mis à jour : %@"
 
 msgid "Make another donation"
 msgstr "Faire un nouveau don"

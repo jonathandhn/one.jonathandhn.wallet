@@ -212,6 +212,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
                       'label' => E::ts('TIME'),
                       'value' => date('H:i', strtotime($event['start_date'])),
                       'textAlignment' => 'PKTextAlignmentRight',
+                      'changeMessage' => E::ts('The event time changed: %@'),
                     ],
         ],
         'auxiliaryFields' => $auxiliaryFields,
@@ -226,7 +227,12 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
         ],
       ],
       'locations' => $locations,
-      'relevantDate' => date('c', strtotime($event['start_date'])),
+      'relevantDates' => [
+        [
+          'startDate' => date('c', strtotime($event['start_date'])),
+          'endDate' => !empty($event['end_date']) ? date('c', strtotime($event['end_date'])) : date('c', strtotime($event['start_date'] . ' + 1 day')),
+        ],
+      ],
       'expirationDate' => !empty($event['end_date']) ? date('c', strtotime($event['end_date'])) : date('c', strtotime($event['start_date'] . ' + 1 day')),
     ];
 
@@ -437,6 +443,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
         ],
       ],
       'reviewStatus' => 'UNDER_REVIEW',
+      'notifyPreference' => 'NOTIFY_ON_UPDATE',
       'hexBackgroundColor' => Civi::settings()->get('wallet_color_background') ?: '#53b459',
       'dateTime' => [
         'start' => date('Y-m-d\TH:i:s', strtotime($event['start_date'])),
@@ -508,7 +515,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
 
     try {
       $service->eventticketclass->get($classId);
-      $service->eventticketclass->update($classId, $classObj);
+      $service->eventticketclass->patch($classId, $classObj);
     }
     catch (\Google\Service\Exception $e) {
       if ($e->getCode() == 404) {
@@ -536,16 +543,35 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
       ];
     }
 
+    $participantStatusClass = NULL;
+    if (!empty($participant['status_id'])) {
+      $participantStatus = \Civi\Api4\ParticipantStatusType::get(FALSE)
+        ->addSelect('class')
+        ->addWhere('id', '=', $participant['status_id'])
+        ->execute()
+        ->first();
+      $participantStatusClass = $participantStatus['class'] ?? NULL;
+    }
+
     $objectMetadata = [
       'id' => $objectId,
       'classId' => $classId,
-      'state' => 'ACTIVE',
+      'state' => strcasecmp((string) $participantStatusClass, 'Positive') === 0 ? 'ACTIVE' : 'INACTIVE',
+      'notifyPreference' => 'NOTIFY_ON_UPDATE',
       'ticketHolderName' => $contact['display_name'],
       'textModulesData' => $textModulesData,
       'barcode' => [
         'type' => 'QR_CODE',
         'value' => $barcodeValue,
         'alternateText' => is_numeric($barcodeValue) ? (string) $barcodeValue : '',
+      ],
+      'validTimeInterval' => [
+        'start' => [
+          'date' => date('c', strtotime($event['start_date'])),
+        ],
+        'end' => [
+          'date' => !empty($event['end_date']) ? date('c', strtotime($event['end_date'])) : date('c', strtotime($event['start_date'] . ' + 1 day')),
+        ],
       ],
     ];
 
@@ -592,7 +618,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
 
     try {
       $service->eventticketobject->get($objectId);
-      $service->eventticketobject->update($objectId, $objectObj);
+      $service->eventticketobject->patch($objectId, $objectObj);
     }
     catch (\Google\Service\Exception $e) {
       if ($e->getCode() == 404) {

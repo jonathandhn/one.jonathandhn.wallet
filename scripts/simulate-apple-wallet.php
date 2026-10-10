@@ -77,7 +77,7 @@ try {
     throw new RuntimeException("Unexpected pass content type: {$contentType}");
   }
   appleWalletValidatePass($response['body']);
-  appleWalletReport('Signed pass with modern barcodes', $response['status']);
+  appleWalletReport('Signed pass with current metadata', $response['status']);
 
   $response = appleWalletRequest('POST', $baseUrl . '/v1/log', NULL, [
     'logs' => ['CiviWallet protocol simulator'],
@@ -174,6 +174,14 @@ function appleWalletValidatePass(string $content): void {
     }
     if (isset($pass['barcode'])) {
       throw new RuntimeException('pass.json still contains the deprecated barcode object.');
+    }
+    if (isset($pass['eventTicket'])) {
+      if (empty($pass['relevantDates']) || !is_array($pass['relevantDates'])) {
+        throw new RuntimeException('The event pass does not use the current relevantDates array.');
+      }
+      if (isset($pass['relevantDate'])) {
+        throw new RuntimeException('The event pass still contains the deprecated relevantDate field.');
+      }
     }
   }
   finally {
