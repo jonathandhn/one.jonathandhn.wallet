@@ -253,8 +253,8 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
     $customFields = self::getWalletCustomFields();
     if (!empty($customFields['image'])) {
       try {
-        $customImageValue = \Civi\Api4\Event::get(FALSE)->addSelect('custom_' . $customFields['image'])->addWhere('id', '=', $event['id'])->execute()->first();
-        $customImageId = $customImageValue['custom_' . $customFields['image']] ?? NULL;
+        $customImageValue = \Civi\Api4\Event::get(FALSE)->addSelect($customFields['image'])->addWhere('id', '=', $event['id'])->execute()->first();
+        $customImageId = $customImageValue[$customFields['image']] ?? NULL;
         if ($customImageId) {
           $file = \Civi\Api4\File::get(FALSE)->addWhere('id', '=', $customImageId)->execute()->first();
           $fileName = $file['uri'] ?? NULL;
@@ -273,8 +273,8 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
 
     if (!empty($customFields['color'])) {
       try {
-        $customColorValue = \Civi\Api4\Event::get(FALSE)->addSelect('custom_' . $customFields['color'])->addWhere('id', '=', $event['id'])->execute()->first();
-        $customColor = $customColorValue['custom_' . $customFields['color']] ?? NULL;
+        $customColorValue = \Civi\Api4\Event::get(FALSE)->addSelect($customFields['color'])->addWhere('id', '=', $event['id'])->execute()->first();
+        $customColor = $customColorValue[$customFields['color']] ?? NULL;
         if ($customColor) {
           [$r, $g, $b] = sscanf($customColor, "#%02x%02x%02x");
           $passData['backgroundColor'] = "rgb($r,$g,$b)";
@@ -403,8 +403,8 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
 
     if (!empty($customFields['color'])) {
       try {
-        $customColorValue = \Civi\Api4\Event::get(FALSE)->addSelect('custom_' . $customFields['color'])->addWhere('id', '=', $event['id'])->execute()->first();
-        $customColor = $customColorValue['custom_' . $customFields['color']] ?? NULL;
+        $customColorValue = \Civi\Api4\Event::get(FALSE)->addSelect($customFields['color'])->addWhere('id', '=', $event['id'])->execute()->first();
+        $customColor = $customColorValue[$customFields['color']] ?? NULL;
       }
       catch (Exception) {
       }
@@ -412,8 +412,8 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
 
     if (!empty($customFields['image'])) {
       try {
-        $customImageValue = \Civi\Api4\Event::get(FALSE)->addSelect('custom_' . $customFields['image'])->addWhere('id', '=', $event['id'])->execute()->first();
-        $customImageId = $customImageValue['custom_' . $customFields['image']] ?? NULL;
+        $customImageValue = \Civi\Api4\Event::get(FALSE)->addSelect($customFields['image'])->addWhere('id', '=', $event['id'])->execute()->first();
+        $customImageId = $customImageValue[$customFields['image']] ?? NULL;
         if ($customImageId) {
           $file = \Civi\Api4\File::get(FALSE)->addWhere('id', '=', $customImageId)->execute()->first();
           $fileName = $file['uri'] ?? NULL;
@@ -652,29 +652,28 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
     return "https://pay.google.com/gp/v/save/{$token}";
   }
 
-  private static function getWalletCustomFields() {
+  /**
+   * @return array<string, string>
+   */
+  private static function getWalletCustomFields(): array {
     static $fields = NULL;
     if ($fields === NULL) {
       $fields = [];
       try {
-        $colorField = \Civi\Api4\CustomField::get(FALSE)
-          ->addWhere('name', '=', 'Wallet_Background_Color')
+        $customFields = \Civi\Api4\CustomField::get(FALSE)
+          ->addSelect('name', 'custom_group_id.name')
           ->addWhere('custom_group_id.name', '=', 'Wallet_Settings')
-          ->execute()->first();
-        if ($colorField) {
-          $fields['color'] = $colorField['id'];
-        }
-      }
-      catch (Exception $e) {
-      }
-
-      try {
-        $imageField = \Civi\Api4\CustomField::get(FALSE)
-          ->addWhere('name', '=', 'Wallet_Image')
-          ->addWhere('custom_group_id.name', '=', 'Wallet_Settings')
-          ->execute()->first();
-        if ($imageField) {
-          $fields['image'] = $imageField['id'];
+          ->addWhere('name', 'IN', ['Wallet_Background_Color', 'Wallet_Image'])
+          ->addWhere('is_active', '=', TRUE)
+          ->execute();
+        foreach ($customFields as $customField) {
+          $apiKey = (string) $customField['custom_group_id.name'] . '.' . $customField['name'];
+          if ($customField['name'] === 'Wallet_Background_Color') {
+            $fields['color'] = $apiKey;
+          }
+          elseif ($customField['name'] === 'Wallet_Image') {
+            $fields['image'] = $apiKey;
+          }
         }
       }
       catch (Exception) {

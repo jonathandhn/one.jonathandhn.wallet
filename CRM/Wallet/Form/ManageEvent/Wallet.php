@@ -5,7 +5,7 @@ use CRM_Wallet_ExtensionUtil as E;
 class CRM_Wallet_Form_ManageEvent_Wallet extends CRM_Event_Form_ManageEvent {
   /**
    * @var array
-   * @phpstan-var array<string, array{id: int, label: string, html_type: string, data_type: string}>
+   * @phpstan-var array<string, array{id: int, api_key: string, label: string, html_type: string, data_type: string}>
    */
   private array $walletFields = [];
 
@@ -50,12 +50,12 @@ class CRM_Wallet_Form_ManageEvent_Wallet extends CRM_Event_Form_ManageEvent {
   }
 
   /**
-   * @return array<string, array{id:int,label:string,html_type:string,data_type:string}>
+   * @return array<string, array{id:int,api_key:string,label:string,html_type:string,data_type:string}>
    */
   private function getWalletFields(): array {
     $fields = [];
     $customFields = \Civi\Api4\CustomField::get(FALSE)
-      ->addSelect('id', 'name', 'label', 'html_type', 'data_type')
+      ->addSelect('id', 'name', 'label', 'html_type', 'data_type', 'custom_group_id.name')
       ->addWhere('custom_group_id.name', '=', 'Wallet_Settings')
       ->addWhere('name', 'IN', ['Wallet_Image', 'Wallet_Background_Color'])
       ->addWhere('is_active', '=', TRUE)
@@ -65,6 +65,7 @@ class CRM_Wallet_Form_ManageEvent_Wallet extends CRM_Event_Form_ManageEvent {
       if ($field['name'] === 'Wallet_Image') {
         $fields['image'] = [
           'id' => (int) $field['id'],
+          'api_key' => (string) $field['custom_group_id.name'] . '.' . $field['name'],
           'label' => (string) $field['label'],
           'html_type' => (string) $field['html_type'],
           'data_type' => (string) $field['data_type'],
@@ -73,6 +74,7 @@ class CRM_Wallet_Form_ManageEvent_Wallet extends CRM_Event_Form_ManageEvent {
       elseif ($field['name'] === 'Wallet_Background_Color') {
         $fields['color'] = [
           'id' => (int) $field['id'],
+          'api_key' => (string) $field['custom_group_id.name'] . '.' . $field['name'],
           'label' => (string) $field['label'],
           'html_type' => (string) $field['html_type'],
           'data_type' => (string) $field['data_type'],
@@ -94,7 +96,7 @@ class CRM_Wallet_Form_ManageEvent_Wallet extends CRM_Event_Form_ManageEvent {
 
     $select = [];
     foreach ($this->walletFields as $field) {
-      $select[] = 'custom_' . $field['id'];
+      $select[] = $field['api_key'];
     }
 
     if ($select === []) {
@@ -113,8 +115,9 @@ class CRM_Wallet_Form_ManageEvent_Wallet extends CRM_Event_Form_ManageEvent {
 
     foreach ($this->walletFields as $field) {
       $elementName = 'custom_' . $field['id'];
-      if (array_key_exists($elementName, $event) && $event[$elementName] !== NULL && $field['html_type'] !== 'File') {
-        $defaults[$elementName] = $event[$elementName];
+      $apiKey = $field['api_key'];
+      if (array_key_exists($apiKey, $event) && $event[$apiKey] !== NULL && $field['html_type'] !== 'File') {
+        $defaults[$elementName] = $event[$apiKey];
       }
     }
 
@@ -129,14 +132,14 @@ class CRM_Wallet_Form_ManageEvent_Wallet extends CRM_Event_Form_ManageEvent {
       return NULL;
     }
 
-    $fieldId = $this->walletFields['image']['id'];
+    $apiKey = $this->walletFields['image']['api_key'];
     $event = \Civi\Api4\Event::get(FALSE)
-      ->addSelect('custom_' . $fieldId)
+      ->addSelect($apiKey)
       ->addWhere('id', '=', $this->getEventID())
       ->execute()
       ->first();
 
-    $fileId = (int) ($event['custom_' . $fieldId] ?? 0);
+    $fileId = (int) ($event[$apiKey] ?? 0);
     if ($fileId <= 0) {
       return NULL;
     }
