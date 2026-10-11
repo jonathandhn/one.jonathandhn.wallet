@@ -109,7 +109,6 @@ readonly RUNTIME_RESOURCES=(
   xml
   managed
   resources
-  mixin
   extern
   README.md
 )
