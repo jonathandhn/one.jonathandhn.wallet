@@ -100,13 +100,22 @@ final class LocaleResolver {
    */
   private static function getAvailableLocales(): array {
     $locales = ['en_US'];
-    $pattern = E::path('l10n/*/LC_MESSAGES/civi_wallet.mo');
-    foreach (glob($pattern) ?: [] as $catalogPath) {
-      $locale = basename(dirname(dirname($catalogPath)));
-      if (preg_match('/^[a-z]{2}_[A-Z]{2}$/', $locale)) {
-        $locales[] = $locale;
+    $catalogPatterns = [
+      rtrim(\CRM_Core_I18n::getResourceDir(), DIRECTORY_SEPARATOR)
+      . DIRECTORY_SEPARATOR . '*' . DIRECTORY_SEPARATOR . 'LC_MESSAGES'
+      . DIRECTORY_SEPARATOR . 'civi_wallet.mo',
+      E::path('l10n/*/LC_MESSAGES/civi_wallet.mo'),
+    ];
+
+    foreach ($catalogPatterns as $catalogPattern) {
+      foreach (glob($catalogPattern) ?: [] as $catalogPath) {
+        $locale = basename(dirname(dirname($catalogPath)));
+        if (preg_match('/^[a-z]{2}_[A-Z]{2}$/', $locale)) {
+          $locales[] = $locale;
+        }
       }
     }
+
     return array_values(array_unique($locales));
   }
 

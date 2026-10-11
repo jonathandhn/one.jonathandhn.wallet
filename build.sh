@@ -103,7 +103,6 @@ php -r '
 
 readonly RUNTIME_RESOURCES=(
   info.xml
-  l10n
   settings
   schema
   templates
@@ -118,6 +117,9 @@ for item in "${RUNTIME_RESOURCES[@]}"; do
   [[ -e "${ROOT_DIR}/${item}" ]] || fail "missing runtime resource: ${item}"
   cp -R "${ROOT_DIR}/${item}" "${PACKAGE_DIR}/"
 done
+if [[ -d "${ROOT_DIR}/l10n" ]]; then
+  cp -R "${ROOT_DIR}/l10n" "${PACKAGE_DIR}/"
+fi
 mkdir -p "${PACKAGE_DIR}/scripts"
 cp "${ROOT_DIR}/scripts/simulate-apple-wallet.php" "${PACKAGE_DIR}/scripts/"
 
@@ -130,7 +132,6 @@ readonly REQUIRED_PACKAGE_FILES=(
   schema/WalletDevice.entityType.php
   settings/Wallet.setting.php
   templates/CRM/Wallet/Form/Config.tpl
-  l10n/fr_FR/LC_MESSAGES/civi_wallet.mo
   scripts/simulate-apple-wallet.php
   vendor/autoload.php
   vendor/pkpass/pkpass/src/Certificate/AppleWWDRCA.pem
