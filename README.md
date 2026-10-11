@@ -114,6 +114,33 @@ The extension adds a **Wallet** tab on Event configuration pages for event-level
 - **Wallet Image**: Upload a visual override for the event pass.
 - **Wallet Background Color**: Override the default background color for this event only (Hex code, e.g., `#FF0000`).
 
+### Image Recommendations
+
+Use the following source assets when preparing Wallet images. These source
+recommendations are intended for the MediaScaler rendition pipeline; the
+current release does not yet generate every target variant automatically.
+
+| Source asset | Preferred format | Recommended size | Composition |
+| --- | --- | --- | --- |
+| Brand icon | PNG | At least 660 x 660 px (1:1) | Keep the mark inside the central 70%; Google applies a circular mask. |
+| Wide brand logo | Transparent PNG | 1280 x 400 px (16:5) | Use a light logo on dark passes and a dark logo on light passes. |
+| Event image master | PNG or high-quality JPEG | 2064 x 1624 px preferred; 1032 x 812 px minimum | Keep the subject near the selected focus point, leave vertical breathing room, and do not embed text. |
+
+The event master is expected to produce these platform renditions:
+
+- Google Wallet hero image: 1032 x 812 px, approximately 5:4, preferably PNG.
+- Apple Wallet legacy event strip: 375 x 98 px, plus 750 x 196 px (`@2x`)
+  and 1125 x 294 px (`@3x`) PNG variants.
+
+Apple and Google may crop images on different devices. Important content must
+therefore remain around the focus point. Titles, dates, sponsor names, QR codes,
+and other essential information belong in pass fields rather than inside the
+image.
+
+References: [Apple Wallet image guidance](https://developer.apple.com/design/human-interface-guidelines/wallet),
+[Apple legacy pass dimensions](https://developer.apple.com/library/archive/documentation/UserExperience/Conceptual/PassKit_PG/Creating.html),
+and [Google Wallet event-ticket brand guidelines](https://developers.google.com/wallet/tickets/events/resources/brand-guidelines).
+
 ### Participant Workflow
 
 - Participants receive a download link or QR Code in their email confirmation by inserting the following tokens in Message Templates.
