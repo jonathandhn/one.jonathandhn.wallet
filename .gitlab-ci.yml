@@ -23,6 +23,7 @@ test:
     - find Civi CRM -type f -name '*.php' -print0 | xargs -0 -n1 php -l
     - find extern tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
     - php tests/ApiRequestGuardTest.php
+    - php tests/LocaleResolverTest.php
     - php -l civi_wallet.php
     - php -l civi_wallet.civix.php
   rules:

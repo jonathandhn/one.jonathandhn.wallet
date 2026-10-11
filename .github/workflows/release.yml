@@ -35,6 +35,9 @@ jobs:
       - name: Test Apple Wallet request guard
         run: php tests/ApiRequestGuardTest.php
 
+      - name: Test Wallet locale resolution
+        run: php tests/LocaleResolverTest.php
+
       - name: Build scoped installable package
         run: ./build.sh
 

@@ -1,6 +1,7 @@
 <?php
 
 use CRM_Wallet_ExtensionUtil as E;
+use Civi\Wallet\LocaleResolver;
 
 class CRM_Wallet_BAO_Pass extends CRM_Core_DAO {
 
@@ -32,16 +33,22 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO {
       throw new Exception("Apple Wallet channel or pass type disabled.");
     }
 
-    if ($entityTable === 'civicrm_participant') {
-      return CRM_Wallet_PassType_Participant::createApplePass($entityId);
+    $localeScope = LocaleResolver::swapForEntity($entityTable, (int) $entityId);
+    try {
+      if ($entityTable === 'civicrm_participant') {
+        return CRM_Wallet_PassType_Participant::createApplePass($entityId);
+      }
+      elseif ($entityTable === 'civicrm_contact' || $entityTable === 'civicrm_membership') {
+        return CRM_Wallet_PassType_Membership::createApplePass($entityId);
+      }
+      elseif ($entityTable === 'civicrm_donor') {
+        return CRM_Wallet_PassType_Donor::createApplePass($entityId);
+      }
+      throw new Exception("Unsupported entity table for Apple Wallet: $entityTable");
     }
-    elseif ($entityTable === 'civicrm_contact' || $entityTable === 'civicrm_membership') {
-      return CRM_Wallet_PassType_Membership::createApplePass($entityId);
+    finally {
+      $localeScope?->cleanup();
     }
-    elseif ($entityTable === 'civicrm_donor') {
-      return CRM_Wallet_PassType_Donor::createApplePass($entityId);
-    }
-    throw new Exception("Unsupported entity table for Apple Wallet: $entityTable");
   }
 
   public static function createGooglePass($entityTable, $entityId) {
@@ -49,16 +56,22 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO {
       throw new Exception("Google Wallet channel or pass type disabled.");
     }
 
-    if ($entityTable === 'civicrm_participant') {
-      return CRM_Wallet_PassType_Participant::createGooglePass($entityId);
+    $localeScope = LocaleResolver::swapForEntity($entityTable, (int) $entityId);
+    try {
+      if ($entityTable === 'civicrm_participant') {
+        return CRM_Wallet_PassType_Participant::createGooglePass($entityId);
+      }
+      elseif ($entityTable === 'civicrm_contact' || $entityTable === 'civicrm_membership') {
+        return CRM_Wallet_PassType_Membership::createGooglePass($entityId);
+      }
+      elseif ($entityTable === 'civicrm_donor') {
+        return CRM_Wallet_PassType_Donor::createGooglePass($entityId);
+      }
+      throw new Exception("Unsupported entity table for Google Wallet: $entityTable");
     }
-    elseif ($entityTable === 'civicrm_contact' || $entityTable === 'civicrm_membership') {
-      return CRM_Wallet_PassType_Membership::createGooglePass($entityId);
+    finally {
+      $localeScope?->cleanup();
     }
-    elseif ($entityTable === 'civicrm_donor') {
-      return CRM_Wallet_PassType_Donor::createGooglePass($entityId);
-    }
-    throw new Exception("Unsupported entity table for Google Wallet: $entityTable");
   }
 
   public static function updatePasses($entity, $id) {

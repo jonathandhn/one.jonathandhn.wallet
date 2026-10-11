@@ -203,7 +203,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
                     [
                       'key' => 'start-date',
                       'label' => E::ts('DATE'),
-                      'value' => date('d M Y', strtotime($event['start_date'])),
+                      'value' => CRM_Utils_Date::customFormat($event['start_date'], '%e %b %Y'),
                       'textAlignment' => 'PKTextAlignmentLeft',
                       'changeMessage' => E::ts('The date changed: %@'),
                     ],

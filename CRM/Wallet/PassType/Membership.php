@@ -78,7 +78,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
 
     $bgColor = $isActive ? (Civi::settings()->get('wallet_color_membership_active') ?: 'rgb(83,180,89)') : (Civi::settings()->get('wallet_color_membership_expired') ?: 'rgb(160,160,160)');
 
-    $endDateStr = !empty($membership['end_date']) ? date('d M Y', strtotime($membership['end_date'])) : E::ts('Lifetime');
+    $endDateStr = !empty($membership['end_date']) ? CRM_Utils_Date::customFormat($membership['end_date'], '%e %b %Y') : E::ts('Lifetime');
 
     // Base URL for redirection
     $apiBaseUrl = rtrim(CRM_Utils_System::baseCMSURL(), '/') . '/civicrm/wallet/api/redirect';
@@ -247,7 +247,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
 
     $isActive = !empty($status['is_current_member']);
 
-    $endDateStr = !empty($membership['end_date']) ? date('d M Y', strtotime($membership['end_date'])) : E::ts('Lifetime');
+    $endDateStr = !empty($membership['end_date']) ? CRM_Utils_Date::customFormat($membership['end_date'], '%e %b %Y') : E::ts('Lifetime');
 
     // Prepare Class Metadata (LoyaltyClass)
     $classMetadata = [
