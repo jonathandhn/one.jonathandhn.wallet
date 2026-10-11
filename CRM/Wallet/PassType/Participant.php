@@ -132,7 +132,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
       $backFields[] = [
         'key' => 'description',
         'label' => E::ts('Description'),
-        'value' => strip_tags($event['description']),
+        'value' => trim(CRM_Utils_String::htmlToText((string) $event['description'])),
       ];
     }
 
@@ -173,7 +173,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
       $auxiliaryFields[] = [
         'key' => 'fee-level',
         'label' => E::ts('TICKET'),
-        'value' => strip_tags(str_replace('&nbsp;', ' ', $feeLevel)),
+        'value' => trim(CRM_Utils_String::htmlToText((string) $feeLevel)),
         'changeMessage' => E::ts('Your ticket was updated: %@'),
       ];
     }
@@ -539,7 +539,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
       $feeLevel = is_array($participant['fee_level']) ? implode(', ', $participant['fee_level']) : $participant['fee_level'];
       $textModulesData[] = [
         'header' => E::ts('Ticket'),
-        'body' => strip_tags(str_replace('&nbsp;', ' ', $feeLevel)),
+        'body' => trim(CRM_Utils_String::htmlToText((string) $feeLevel)),
       ];
     }
 
