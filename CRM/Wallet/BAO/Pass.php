@@ -1,0 +1,246 @@
+<?php
+
+use CRM_Wallet_ExtensionUtil as E;
+use Civi\Wallet\LocaleResolver;
+
+class CRM_Wallet_BAO_Pass extends CRM_Core_DAO {
+
+  private static function isChannelEnabled($type) {
+    $map = [
+      'apple' => 'wallet_channel_apple_enabled',
+      'google' => 'wallet_channel_google_enabled',
+    ];
+
+    return (bool) Civi::settings()->get($map[$type] ?? '');
+  }
+
+  private static function isEntityTableEnabled($entityTable) {
+    $map = [
+      'civicrm_participant' => 'wallet_type_participant_enabled',
+      'civicrm_contact' => 'wallet_type_membership_enabled',
+      'civicrm_membership' => 'wallet_type_membership_enabled',
+      'civicrm_donor' => 'wallet_type_donor_enabled',
+    ];
+
+    return (bool) Civi::settings()->get($map[$entityTable] ?? '');
+  }
+
+  /**
+   * Create an Apple Wallet Pass for a participant or membership.
+   */
+  public static function createApplePass($entityTable, $entityId) {
+    if (!self::isChannelEnabled('apple') || !self::isEntityTableEnabled($entityTable)) {
+      throw new Exception("Apple Wallet channel or pass type disabled.");
+    }
+
+    $localeScope = LocaleResolver::swapForEntity($entityTable, (int) $entityId);
+    try {
+      if ($entityTable === 'civicrm_participant') {
+        return CRM_Wallet_PassType_Participant::createApplePass($entityId);
+      }
+      elseif ($entityTable === 'civicrm_contact' || $entityTable === 'civicrm_membership') {
+        return CRM_Wallet_PassType_Membership::createApplePass($entityId);
+      }
+      elseif ($entityTable === 'civicrm_donor') {
+        return CRM_Wallet_PassType_Donor::createApplePass($entityId);
+      }
+      throw new Exception("Unsupported entity table for Apple Wallet: $entityTable");
+    }
+    finally {
+      $localeScope?->cleanup();
+    }
+  }
+
+  public static function createGooglePass($entityTable, $entityId) {
+    if (!self::isChannelEnabled('google') || !self::isEntityTableEnabled($entityTable)) {
+      throw new Exception("Google Wallet channel or pass type disabled.");
+    }
+
+    $localeScope = LocaleResolver::swapForEntity($entityTable, (int) $entityId);
+    try {
+      if ($entityTable === 'civicrm_participant') {
+        return CRM_Wallet_PassType_Participant::createGooglePass($entityId);
+      }
+      elseif ($entityTable === 'civicrm_contact' || $entityTable === 'civicrm_membership') {
+        return CRM_Wallet_PassType_Membership::createGooglePass($entityId);
+      }
+      elseif ($entityTable === 'civicrm_donor') {
+        return CRM_Wallet_PassType_Donor::createGooglePass($entityId);
+      }
+      throw new Exception("Unsupported entity table for Google Wallet: $entityTable");
+    }
+    finally {
+      $localeScope?->cleanup();
+    }
+  }
+
+  public static function updatePasses($entity, $id) {
+    $tasks = [];
+
+    if ($entity == 'Event') {
+      try {
+        // Use the legacy participant_id column until the entity migration has run.
+        $hasEntityId = (bool) CRM_Core_DAO::singleValueQuery("
+                    SELECT 1 FROM information_schema.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'civicrm_wallet_pass' AND COLUMN_NAME = 'entity_id'
+                ");
+
+        if ($hasEntityId) {
+          $dao = CRM_Core_DAO::executeQuery("
+                        SELECT p.entity_id
+                        FROM civicrm_wallet_pass p
+                        JOIN civicrm_participant cp ON p.entity_id = cp.id
+                        WHERE cp.event_id = %1 AND p.entity_table = 'civicrm_participant'
+                    ", [1 => [$id, 'Integer']]);
+          while ($dao->fetch()) {
+            $tasks[] = ['table' => 'civicrm_participant', 'id' => $dao->entity_id];
+          }
+        }
+        else {
+          // Preserve compatibility with the legacy 1.0 schema.
+          $dao = CRM_Core_DAO::executeQuery("
+                        SELECT p.participant_id
+                        FROM civicrm_wallet_pass p
+                        JOIN civicrm_participant cp ON p.participant_id = cp.id
+                        WHERE cp.event_id = %1
+                    ", [1 => [$id, 'Integer']]);
+          while ($dao->fetch()) {
+            $tasks[] = ['table' => 'civicrm_participant', 'id' => $dao->participant_id];
+          }
+        }
+      }
+      catch (Throwable $e) {
+        // Never block a CiviCRM event save because pass refresh failed.
+        Civi::log()->warning('CRM_Wallet_BAO_Pass::updatePasses error: ' . $e->getMessage());
+      }
+    }
+    elseif ($entity == 'Participant') {
+      $tasks[] = ['table' => 'civicrm_participant', 'id' => $id];
+    }
+    elseif ($entity == 'Membership') {
+      $membership = \Civi\Api4\Membership::get(FALSE)->addWhere('id', '=', $id)->execute()->first();
+      if ($membership) {
+        $tasks[] = ['table' => 'civicrm_contact', 'id' => $membership['contact_id']];
+      }
+    }
+    elseif ($entity == 'Donor') {
+      $tasks[] = ['table' => 'civicrm_donor', 'id' => $id];
+    }
+    elseif ($entity == 'Contact') {
+      $tasks[] = ['table' => 'civicrm_contact', 'id' => $id];
+    }
+
+    if (empty($tasks)) {
+      return;
+    }
+
+    $queue = CRM_Queue_Service::singleton()->create([
+      'type' => 'Sql',
+      'name' => 'one.jonathandhn.wallet.updates',
+      'runner' => 'task',
+    ]);
+
+    foreach ($tasks as $taskInfo) {
+      $task = new CRM_Queue_Task(
+        ['CRM_Wallet_BAO_Pass', 'processPassUpdate'],
+        [$taskInfo['table'], $taskInfo['id']],
+        "Update Pass for {$taskInfo['table']} {$taskInfo['id']}"
+      );
+      $queue->createItem($task);
+    }
+  }
+
+  public static function processPassUpdate(CRM_Queue_TaskContext $ctx, $entityTable, $entityId) {
+    // 1. Update Google Wallet
+    if (self::isChannelEnabled('google') && self::isEntityTableEnabled($entityTable)) {
+      try {
+        self::createGooglePass($entityTable, $entityId);
+      }
+      catch (Exception $e) {
+        // Ignore Google errors
+        CRM_Core_Error::debug_log_message("Google Wallet Update Error: " . $e->getMessage());
+      }
+    }
+
+    // Publish the new update tag before notifying Apple devices.
+    CRM_Core_DAO::executeQuery("UPDATE civicrm_wallet_pass SET last_updated = NOW() WHERE entity_table = %1 AND entity_id = %2", [1 => [$entityTable, 'String'], 2 => [$entityId, 'Integer']]);
+
+    // 2. Update Apple Wallet (Push Notification)
+    if (self::isChannelEnabled('apple') && self::isEntityTableEnabled($entityTable)) {
+      $dao = CRM_Core_DAO::executeQuery("
+                SELECT d.push_token
+                FROM civicrm_wallet_device d
+                JOIN civicrm_wallet_pass p ON d.pass_id = p.id
+                WHERE p.entity_table = %1 AND p.entity_id = %2 AND p.type = 'apple'
+            ", [1 => [$entityTable, 'String'], 2 => [$entityId, 'Integer']]);
+
+      while ($dao->fetch()) {
+        self::sendApplePushNotification($dao->push_token);
+      }
+    }
+
+    return TRUE;
+  }
+
+  public static function sendApplePushNotification($pushToken) {
+    $certPath = Civi::settings()->get('wallet_apple_cert');
+    $certPass = Civi::settings()->get('wallet_apple_cert_password');
+
+    if (!$certPath || !file_exists($certPath)) {
+      CRM_Core_Error::debug_log_message("Apple Push Error: Certificate not found or not configured.");
+      return;
+    }
+
+    if (!defined('CURL_HTTP_VERSION_2_0')) {
+      define('CURL_HTTP_VERSION_2_0', 3);
+    }
+
+    $endpoints = [
+      'production' => "https://api.push.apple.com/3/device/$pushToken",
+      'sandbox' => "https://api.development.push.apple.com/3/device/$pushToken",
+    ];
+
+    foreach ($endpoints as $env => $url) {
+      $ch = curl_init();
+      curl_setopt($ch, CURLOPT_URL, $url);
+      curl_setopt($ch, CURLOPT_PORT, 443);
+      curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
+      curl_setopt($ch, CURLOPT_POST, TRUE);
+      curl_setopt($ch, CURLOPT_POSTFIELDS, "{}");
+      curl_setopt($ch, CURLOPT_SSLCERT, $certPath);
+      curl_setopt($ch, CURLOPT_SSLCERTTYPE, 'P12');
+      curl_setopt($ch, CURLOPT_SSLCERTPASSWD, $certPass);
+      curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+
+      $response = curl_exec($ch);
+      $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+      $curlError = curl_error($ch);
+
+      if ($httpcode === 200) {
+        break;
+      }
+
+      $responseJson = json_decode($response, TRUE);
+      $reason = $responseJson['reason'] ?? 'Unknown';
+
+      if ($httpcode === 400 && $reason === 'BadDeviceToken' && $env === 'production') {
+        CRM_Core_Error::debug_log_message("Apple Push Info: BadDeviceToken on Production. Retrying with Sandbox...");
+        continue;
+      }
+
+      if ($response === FALSE) {
+        if ($env === 'sandbox' && str_contains($curlError, 'HTTP2 framing layer')) {
+          // Ignore
+        }
+        else {
+          CRM_Core_Error::debug_log_message("Apple Push Curl Error ($env): " . $curlError);
+        }
+      }
+      else {
+        CRM_Core_Error::debug_log_message("Apple Push HTTP Error ($env): $httpcode - $response");
+      }
+      break;
+    }
+  }
+
+}

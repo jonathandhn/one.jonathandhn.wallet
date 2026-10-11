@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<menu>
+  <item>
+    <path>civicrm/wallet/pass</path>
+    <page_callback>CRM_Wallet_Page_Pass</page_callback>
+    <access_arguments>view event info</access_arguments>
+    <is_public>true</is_public>
+    <is_ssl>true</is_ssl>
+  </item>
+  <item>
+    <path>civicrm/wallet/api</path>
+    <page_callback>CRM_Wallet_Page_API</page_callback>
+    <access_arguments>access CiviCRM</access_arguments>
+    <is_public>true</is_public>
+    <is_ssl>true</is_ssl>
+  </item>
+  <item>
+    <path>civicrm/wallet/api/qr</path>
+    <page_callback>CRM_Wallet_Page_QR</page_callback>
+    <access_arguments>view event info</access_arguments>
+    <is_public>true</is_public>
+    <is_ssl>true</is_ssl>
+  </item>
+  <item>
+    <path>civicrm/wallet/deploy-api</path>
+    <page_callback>CRM_Wallet_Page_DeployApi</page_callback>
+    <access_arguments>administer CiviCRM</access_arguments>
+    <title>Deploy Wallet API</title>
+  </item>
+  <item>
+    <path>civicrm/admin/wallet</path>
+    <page_callback>CRM_Wallet_Form_Config</page_callback>
+    <access_arguments>administer CiviCRM</access_arguments>
+    <title>CiviWallet Configuration</title>
+    <adminGroup>System Settings</adminGroup>
+  </item>
+  <item>
+    <path>civicrm/event/manage/wallet</path>
+    <page_callback>CRM_Wallet_Form_ManageEvent_Wallet</page_callback>
+    <access_callback>1</access_callback>
+    <title>Wallet Event Settings</title>
+  </item>
+</menu>

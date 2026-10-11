@@ -1,0 +1,45 @@
+parameters:
+  level: 5
+  phpVersion: 80400
+
+  parallel:
+    maximumNumberOfProcesses: 1
+
+  paths:
+    - civi_wallet.php
+    - Civi/Wallet
+    - CRM/Wallet/BAO/Pass.php
+    - CRM/Wallet/Form
+    - CRM/Wallet/Page
+    - CRM/Wallet/PassType
+    - CRM/Wallet/Utils
+    - managed
+    - settings
+
+  scanFiles:
+    - civi_wallet.civix.php
+    - extern/api.php
+    - ../civicrm-standalone/core/Civi.php
+    - ../civicrm-standalone/core/Civi/Core/CiviEventDispatcherInterface.php
+    - ../civicrm-standalone/core/functions.php
+
+  scanDirectories:
+    - ../civicrm-standalone/core/Civi
+    - ../civicrm-standalone/core/CRM
+    - ../civicrm-standalone/core/packages
+    - ../civicrm-standalone/core/ext/civi_contribute/Civi
+    - ../civicrm-standalone/core/ext/civi_event/Civi
+    - ../civicrm-standalone/core/ext/civi_member/Civi
+    - ../civicrm-standalone/core/packages/smarty5/vendor/smarty/smarty/src
+    - ../civicrm-standalone/core/vendor/symfony/event-dispatcher
+
+  stubFiles:
+    - phpstan/token-processor.stub
+
+  tmpDir: .cache/phpstan
+  treatPhpDocTypesAsCertain: false
+  reportUnmatchedIgnoredErrors: true
+  reportIgnoresWithoutComments: true
+
+  universalObjectCratesClasses:
+    - Civi\Core\Event\GenericHookEvent

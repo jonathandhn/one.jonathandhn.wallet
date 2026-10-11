@@ -1,0 +1,48 @@
+# MacOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Composer
+/vendor/
+composer.phar
+# Note: composer.lock est généralement commité pour les projets, mais vous pouvez le décommenter si nécessaire
+# composer.lock
+
+# Security - Credentials & Keys (Apple & Google Wallet)
+*.p12
+*.pem
+*.key
+*.p8
+# Google Credentials
+*credential*.json
+*secret*.json
+google-services.json
+client_secret_*.json
+service-account.json
+auth.json
+
+# IDEs & Editors
+.idea/
+.antigravity/
+.codex/
+.agents/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Cyberduck & FTP/SFTP Leftovers
+.duck
+.duckversions
+*.part
+*.sftp
+
+dist/
+dist-bundled/
+one.jonathandhn.wallet.zip
+one.jonathandhn.wallet/
+.cache/

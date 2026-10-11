@@ -1,0 +1,144 @@
+# Translation file
+
+msgid ""
+msgstr ""
+"Project-Id-Version: one.jonathandhn.wallet\n"
+"PO-Revision-Date: 2026-10-11 00:00+0200\n"
+"Last-Translator: Jonathan Dahan <jonathan@dhn.one>\n"
+"Language-Team: fr_FR\n"
+"Language: fr_FR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Wallet"
+msgstr "Wallet"
+
+msgid "CiviWallet Settings"
+msgstr "Paramètres CiviWallet"
+
+msgid "Wallet Settings"
+msgstr "Paramètres Wallet"
+
+msgid "Override the default wallet visuals for this event only. Leave these fields empty to keep the global branding configured in CiviWallet settings."
+msgstr "Remplace les visuels Wallet par défaut pour cet événement uniquement. Laissez ces champs vides pour conserver l'identité visuelle globale configurée dans les paramètres CiviWallet."
+
+msgid "Hex color override for the event pass, for example #ea148c."
+msgstr "Surcharge de la couleur hexadécimale du billet de l'événement, par exemple #ea148c."
+
+msgid "Optional event image override used on participant wallet passes. Recommended strip/hero artwork with a wide format."
+msgstr "Surcharge optionnelle de l'image de l'événement utilisée sur les passes wallet des participants. Un visuel de type bannière, au format large, est recommandé."
+
+msgid "Current file: %1"
+msgstr "Fichier actuel : %1"
+
+msgid "Add to Apple Wallet"
+msgstr "Ajouter à Apple Wallet"
+
+msgid "Add to Google Wallet"
+msgstr "Ajouter à Google Wallet"
+
+msgid "QR Code Background Color"
+msgstr "Couleur de fond du QR code"
+
+msgid "Used as an opaque background so QR codes remain readable in dark mode."
+msgstr "Utilisée comme fond opaque afin que les QR codes restent lisibles en mode sombre."
+
+msgid "Organization"
+msgstr "Organisation"
+
+msgid "VENUE"
+msgstr "LIEU"
+
+msgid "The venue changed: %@"
+msgstr "Le lieu a changé : %@"
+
+msgid "Organizer"
+msgstr "Organisateur"
+
+msgid "Information"
+msgstr "Informations"
+
+msgid "HOLDER"
+msgstr "TITULAIRE"
+
+msgid "TICKET"
+msgstr "BILLET"
+
+msgid "Your ticket was updated: %@"
+msgstr "Votre billet a été mis à jour : %@"
+
+msgid "The event changed: %@"
+msgstr "L'événement a changé : %@"
+
+msgid "The date changed: %@"
+msgstr "La date a changé : %@"
+
+msgid "The event time changed: %@"
+msgstr "L'heure de l'événement a changé : %@"
+
+msgid "TIME"
+msgstr "HEURE"
+
+msgid "Ticket"
+msgstr "Billet"
+
+msgid "Lifetime"
+msgstr "À vie"
+
+msgid "%1 membership card"
+msgstr "Carte d'adhérent %1"
+
+msgid "Member"
+msgstr "Adhérent"
+
+msgid "Status"
+msgstr "Statut"
+
+msgid "Your membership status changed: %@"
+msgstr "Votre statut d'adhésion a changé : %@"
+
+msgid "Your membership type changed: %@"
+msgstr "Votre type d'adhésion a changé : %@"
+
+msgid "Valid until"
+msgstr "Valide jusqu'au"
+
+msgid "Your membership was extended until %@"
+msgstr "Votre adhésion a été prolongée jusqu'au %@"
+
+msgid "Renew my membership"
+msgstr "Renouveler mon adhésion"
+
+msgid "Renew in one click"
+msgstr "Renouveler en un clic"
+
+msgid "Update my details"
+msgstr "Mettre à jour mes coordonnées"
+
+msgid "Update my profile"
+msgstr "Mettre à jour mon profil"
+
+msgid "Website"
+msgstr "Site Internet"
+
+msgid "No recent donations"
+msgstr "Aucun don récent"
+
+msgid "Donor"
+msgstr "Donateur"
+
+msgid "Recent donations"
+msgstr "Derniers dons"
+
+msgid "Your recent donations were updated: %@"
+msgstr "Vos derniers dons ont été mis à jour : %@"
+
+msgid "Make another donation"
+msgstr "Faire un nouveau don"
+
+msgid "Donate"
+msgstr "Faire un don"
+
+msgid "Donor card"
+msgstr "Carte de donateur"

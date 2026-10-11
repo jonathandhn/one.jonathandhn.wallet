@@ -1,0 +1,49 @@
+{
+    "name": "one.jonathandhn.wallet/civi-wallet",
+    "description": "CiviCRM extension for Apple and Google Wallet",
+    "license": "AGPL-3.0-or-later",
+    "authors": [
+        {
+            "name": "Jonathan Dahan",
+            "email": "jonathan@dhn.one"
+        }
+    ],
+    "require": {
+        "php": ">=8.4",
+        "pkpass/pkpass": "^2.0",
+        "google/apiclient": "^2.0",
+        "chillerlan/php-qrcode": "^6.0"
+    },
+    "require-dev": {
+        "humbug/php-scoper": "^0.18 || ^0.17",
+        "phpstan/phpstan": "^2.2"
+    },
+    "scripts": {
+        "pre-autoload-dump": "Google\\Task\\Composer::cleanup",
+        "check": [
+            "@civilint",
+            "@phpstan"
+        ],
+        "civilint": "@php scripts/qa.php civilint",
+        "civilint:fix": "@php scripts/qa.php civilint-fix",
+        "phpstan": "@php scripts/qa.php phpstan"
+    },
+    "extra": {
+        "google/apiclient-services": [
+            "Walletobjects"
+        ]
+    },
+    "config": {
+        "platform": {
+            "php": "8.4.0"
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Civi\\Wallet\\": "Civi/Wallet"
+        },
+        "psr-0": {
+            "CRM_": "."
+        }
+    }
+}
