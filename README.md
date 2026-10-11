@@ -1,4 +1,4 @@
-# CiviWallet - Apple & Google Wallet for CiviCRM
+# CiviWallet - QR codes, Apple & Google Wallet for CiviCRM
 
 Generate Apple Wallet (`.pkpass`) and Google Wallet passes and QR codes for
 CiviCRM event participants, memberships, and donors. The extension supports
@@ -8,7 +8,7 @@ custom styling.
 ## Repository
 
 - Canonical repository: [CiviCRM GitLab](https://lab.civicrm.org/extensions/wallet)
-- GitHub mirror: [jonathandhn/CiviWallet](https://github.com/jonathandhn/CiviWallet)
+- GitHub mirror: [jonathandhn/one.jonathandhn.wallet](https://github.com/jonathandhn/one.jonathandhn.wallet)
 
 ## Release package
 
@@ -327,7 +327,7 @@ corporate sponsor. If your organization benefits from this work, you can help
 fund its maintenance, documentation, Apple and Google Wallet compatibility
 testing, or future development.
 
-To sponsor work on CiviWallet or request professional support, please
+To sponsor work on Wallet or request professional support, please
 [visit Jonathan Dahan's website](https://www.jonathan.paris/en) or use the
 [contact form](https://www.jonathan.paris/en/contact).
 
