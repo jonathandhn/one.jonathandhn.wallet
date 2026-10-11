@@ -130,7 +130,7 @@ readonly REQUIRED_PACKAGE_FILES=(
   schema/WalletDevice.entityType.php
   settings/Wallet.setting.php
   templates/CRM/Wallet/Form/Config.tpl
-  l10n/fr_FR.mo
+  l10n/fr_FR/LC_MESSAGES/civi_wallet.mo
   scripts/simulate-apple-wallet.php
   vendor/autoload.php
   vendor/pkpass/pkpass/src/Certificate/AppleWWDRCA.pem
