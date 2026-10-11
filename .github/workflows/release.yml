@@ -32,6 +32,9 @@ jobs:
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress
 
+      - name: Test Apple Wallet request guard
+        run: php tests/ApiRequestGuardTest.php
+
       - name: Build scoped installable package
         run: ./build.sh
 

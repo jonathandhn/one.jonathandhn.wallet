@@ -9,95 +9,69 @@ class CRM_Wallet_Page_API extends CRM_Core_Page {
     $config = CRM_Core_Config::singleton();
     $config->debug = FALSE;
 
-    $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '';
-    $method = $_SERVER['REQUEST_METHOD'];
-
-    // Find the API path starting with /v1/ or /redirect
-    $pos = strpos($uri, '/v1/');
-    $posRedirect = strpos($uri, '/redirect');
-
-    if ($posRedirect !== FALSE) {
-      $this->handleRedirect();
+    if (!class_exists('CiviWalletApiRequestGuard', FALSE)) {
+      if (!defined('CIVI_WALLET_API_LIBRARY_ONLY')) {
+        define('CIVI_WALLET_API_LIBRARY_ONLY', TRUE);
+      }
+      require_once E::path('extern/api.php');
+    }
+    $request = CiviWalletApiRequestGuard::inspect($_SERVER);
+    if ($request['status'] !== NULL) {
+      if ($request['allow']) {
+        header('Allow: ' . implode(', ', $request['allow']));
+      }
+      http_response_code($request['status']);
       CRM_Utils_System::civiExit();
     }
-
-    if ($pos === FALSE) {
-      // Not a valid API request
-      http_response_code(404);
-      CRM_Utils_System::civiExit();
-    }
-
-    // e.g., /v1/devices/...
-    $path = substr($uri, $pos);
-    $parts = explode('/', ltrim($path, '/'));
-
-    // $parts[0] = 'v1'
-    // $parts[1] = 'devices' or 'passes' or 'log'
 
     try {
-      if ($parts[1] == 'devices') {
-        // /v1/devices/{deviceLibraryIdentifier}/registrations/{passTypeIdentifier}/{serialNumber}
-        $deviceLibraryIdentifier = $parts[2];
-        // 'registrations'
-        $action = $parts[3];
+      switch ($request['route']) {
+        case 'register':
+          $this->registerDevice($request['params']['deviceId'], $request['params']['passTypeId'], $request['params']['serialNumber']);
+          break;
 
-        if ($action == 'registrations') {
-          $passTypeIdentifier = $parts[4];
+        case 'unregister':
+          $this->unregisterDevice($request['params']['deviceId'], $request['params']['passTypeId'], $request['params']['serialNumber']);
+          break;
 
-          // Handle optional serialNumber (it might be in the next part)
-          // The URL is .../registrations/{passTypeIdentifier}/{serialNumber}
-          // But sometimes there are query params.
-          // Let's assume standard structure.
-          $serialNumber = $parts[5] ?? NULL;
+        case 'list':
+          $this->getSerialNumbers($request['params']['deviceId'], $request['params']['passTypeId']);
+          break;
 
-          if ($method == 'POST') {
-            $this->registerDevice($deviceLibraryIdentifier, $passTypeIdentifier, $serialNumber);
-          }
-          elseif ($method == 'DELETE') {
-            $this->unregisterDevice($deviceLibraryIdentifier, $passTypeIdentifier, $serialNumber);
-          }
-          elseif ($method == 'GET') {
-            // Get Serial Numbers
-            // /v1/devices/{deviceLibraryIdentifier}/registrations/{passTypeIdentifier}?passesUpdatedSince={tag}
-            $this->getSerialNumbers($deviceLibraryIdentifier, $passTypeIdentifier);
-          }
-        }
-      }
-      elseif ($parts[1] == 'passes') {
-        // /v1/passes/{passTypeIdentifier}/{serialNumber}
-        $passTypeIdentifier = $parts[2];
-        $serialNumber = $parts[3];
-        if ($method == 'GET') {
-          $this->getLatestPass($passTypeIdentifier, $serialNumber);
-        }
-      }
-      elseif ($parts[1] == 'log') {
-        $this->log();
+        case 'pass':
+          $this->getLatestPass($request['params']['passTypeId'], $request['params']['serialNumber']);
+          break;
+
+        case 'log':
+          $this->log();
+          break;
+
+        case 'redirect':
+          $this->handleRedirect();
+          break;
       }
     }
-    catch (Exception $e) {
+    catch (\Throwable $e) {
       http_response_code(500);
       CRM_Core_Error::debug_log_message("Apple Wallet API Error: " . $e->getMessage());
-      echo json_encode(['error' => $e->getMessage()]);
+      echo json_encode(['error' => 'Internal server error']);
     }
 
     CRM_Utils_System::civiExit();
   }
 
   private function authenticate($pass) {
-    $headers = getallheaders();
-    $authHeader = $headers['Authorization'] ?? '';
-
-    // Log headers for debugging
+    $headers = function_exists('getallheaders') ? getallheaders() : [];
+    $headers = array_change_key_case($headers, CASE_LOWER);
+    $authHeader = $headers['authorization'] ?? '';
 
     if (!str_starts_with($authHeader, 'ApplePass ')) {
-      CRM_Core_Error::debug_log_message("Apple Wallet Auth Failed: Header format invalid");
       return FALSE;
     }
     $token = substr($authHeader, 10);
 
-    if ($token !== $pass->authentication_token) {
-      CRM_Core_Error::debug_log_message("Apple Wallet Auth Failed: Token mismatch");
+    $expectedToken = (string) $pass->authentication_token;
+    if ($expectedToken === '' || !hash_equals($expectedToken, $token)) {
       return FALSE;
     }
 
@@ -105,12 +79,9 @@ class CRM_Wallet_Page_API extends CRM_Core_Page {
   }
 
   private function registerDevice($deviceId, $passTypeId, $serialNumber) {
-    CRM_Core_Error::debug_log_message("Apple Wallet Registering Device: $deviceId for Pass: $serialNumber");
-
     // Verify Pass and Auth Token
     $pass = $this->getPass($serialNumber, $passTypeId);
     if (!$pass) {
-      CRM_Core_Error::debug_log_message("Apple Wallet Register Error: Pass not found");
       http_response_code(404);
       return;
     }
@@ -119,13 +90,13 @@ class CRM_Wallet_Page_API extends CRM_Core_Page {
       return;
     }
 
-    $payload = json_decode(file_get_contents('php://input'), TRUE);
-    $pushToken = $payload['pushToken'] ?? NULL;
-
-    if (!$pushToken) {
-      http_response_code(400);
+    $body = file_get_contents('php://input', FALSE, NULL, 0, CiviWalletApiRequestGuard::MAX_BODY_BYTES + 1);
+    $registration = CiviWalletApiRequestGuard::validateRegistrationBody($body === FALSE ? '' : $body);
+    if ($registration['status'] !== 200) {
+      http_response_code($registration['status']);
       return;
     }
+    $pushToken = $registration['pushToken'];
 
     $isRegistered = (bool) CRM_Core_DAO::singleValueQuery(
       'SELECT COUNT(*) FROM civicrm_wallet_device WHERE pass_id = %1 AND device_library_identifier = %2',
@@ -267,13 +238,8 @@ class CRM_Wallet_Page_API extends CRM_Core_Page {
   }
 
   private function log() {
-    $payload = json_decode(file_get_contents('php://input'), TRUE);
-    if (!empty($payload['logs'])) {
-      foreach ($payload['logs'] as $log) {
-        CRM_Core_Error::debug_log_message("Apple Wallet Log: " . $log);
-      }
-    }
-    http_response_code(200);
+    $body = file_get_contents('php://input', FALSE, NULL, 0, CiviWalletApiRequestGuard::MAX_BODY_BYTES + 1);
+    http_response_code(CiviWalletApiRequestGuard::validateLogBody($body === FALSE ? '' : $body));
   }
 
   private function getPass($serialNumber, $passTypeId) {

@@ -18,6 +18,7 @@ parameters:
 
   scanFiles:
     - civi_wallet.civix.php
+    - extern/api.php
     - ../civicrm-standalone/core/Civi.php
     - ../civicrm-standalone/core/Civi/Core/CiviEventDispatcherInterface.php
     - ../civicrm-standalone/core/functions.php
