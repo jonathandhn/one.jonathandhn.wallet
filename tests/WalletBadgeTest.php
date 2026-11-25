@@ -85,6 +85,22 @@ badgeAssertSame(['en_US', 'fr_FR'], array_keys($manifest['assets']), 'only prima
 $asset = BadgeAssetManager::assetForLocale('google', 'fr_CA');
 badgeAssertSame('fr_FR', $asset['locale'] ?? NULL, 'installed badge follows contact language');
 
+$appleZipPath = $testDirectory . '/apple.zip';
+$zip = new ZipArchive();
+$zip->open($appleZipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+for ($index = 0; $index < 510; $index++) {
+  $zip->addFromString('metadata/entry-' . $index . '.txt', 'ignored');
+}
+$embeddedPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL5WQAAAABJRU5ErkJggg==';
+$appleSvg = '<svg width="113" height="35" viewBox="0 0 113 35" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><image width="1" height="1" xlink:href="data:image/png;base64,' . $embeddedPng . '"/></svg>';
+$zip->addFromString('Add-to-Apple-Wallet/Add to Apple Wallet Badges/FR/RGB/FR_Add_to_Apple_Wallet_RGB.svg', $appleSvg);
+$zip->close();
+
+$appleManifest = BadgeAssetManager::installZip('apple', $appleZipPath, 'automated Apple test');
+badgeAssertSame(['fr_FR'], array_keys($appleManifest['assets']), 'large official Apple package layout is accepted');
+$appleAsset = BadgeAssetManager::assetForLocale('apple', 'fr_CA');
+badgeAssertSame('fr_FR', $appleAsset['locale'] ?? NULL, 'Apple badge uses the installed language fallback');
+
 $html = WalletBadgeRenderer::render(
   'https://example.org/apple?a=1&b=2',
   'https://example.org/google',

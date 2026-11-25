@@ -62,7 +62,7 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
     $this->add('file', 'wallet_apple_cert_upload', E::ts('Apple Certificate (.p12)'));
     $this->add('password', 'wallet_apple_cert_password', E::ts('Certificate Password'));
     $this->add('file', 'wallet_badge_apple_zip_upload', E::ts('Official Apple Wallet badge package (.zip)'));
-    $this->addRule('wallet_badge_apple_zip_upload', E::ts('The ZIP package must be smaller than 15 MB.'), 'maxfilesize', (string) (15 * 1024 * 1024));
+    $this->addRule('wallet_badge_apple_zip_upload', E::ts('The ZIP package must be smaller than 100 MB.'), 'maxfilesize', (string) (100 * 1024 * 1024));
 
     // Show current certificate status
     $certPath = Civi::settings()->get('wallet_apple_cert');
@@ -79,7 +79,7 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
     $this->add('text', 'wallet_google_issuer_id', E::ts('Issuer ID'), ['size' => 50]);
     $this->add('file', 'wallet_google_credentials_upload', E::ts('Google Credentials (.json)'));
     $this->add('file', 'wallet_badge_google_zip_upload', E::ts('Official Google Wallet badge package (.zip)'));
-    $this->addRule('wallet_badge_google_zip_upload', E::ts('The ZIP package must be smaller than 15 MB.'), 'maxfilesize', (string) (15 * 1024 * 1024));
+    $this->addRule('wallet_badge_google_zip_upload', E::ts('The ZIP package must be smaller than 100 MB.'), 'maxfilesize', (string) (100 * 1024 * 1024));
     $this->add('advcheckbox', 'wallet_badge_google_download', E::ts('Download and install the current official Google badge package'));
 
     $credsPath = Civi::settings()->get('wallet_google_credentials');
@@ -127,7 +127,7 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
     $this->add('file', 'wallet_image_logo_upload', E::ts('Wide logo master'));
     $this->addRule('wallet_image_icon_upload', E::ts('The image must be smaller than 15 MB.'), 'maxfilesize', (string) (15 * 1024 * 1024));
     $this->addRule('wallet_image_logo_upload', E::ts('The image must be smaller than 15 MB.'), 'maxfilesize', (string) (15 * 1024 * 1024));
-    $this->setMaxFileSize(15 * 1024 * 1024);
+    $this->setMaxFileSize(100 * 1024 * 1024);
 
     $barcodeModes = [
       'simple' => E::ts('Simple (ID / token compatible)'),

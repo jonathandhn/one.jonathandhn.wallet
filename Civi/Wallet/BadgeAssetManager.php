@@ -16,12 +16,13 @@ final class BadgeAssetManager {
 
   public const GOOGLE_PNG_PACKAGE_URL = 'https://developers.google.com/static/wallet/download-assets/add-to-wallet-png.zip';
 
-  private const MAX_ARCHIVE_BYTES = 20 * 1024 * 1024;
-  private const MAX_ENTRY_BYTES = 2 * 1024 * 1024;
-  private const MAX_ENTRIES = 500;
+  private const MAX_ARCHIVE_BYTES = 100 * 1024 * 1024;
+  private const MAX_ENTRY_BYTES = 5 * 1024 * 1024;
+  private const MAX_EXTRACTED_BYTES = 50 * 1024 * 1024;
+  private const MAX_ENTRIES = 750;
 
   /**
-   * Download and install Google's official localized SVG package.
+   * Download and install Google's official localized PNG package.
    *
    * @return array<string,mixed>
    */
@@ -75,6 +76,7 @@ final class BadgeAssetManager {
       }
 
       $assets = [];
+      $ignoredAssets = [];
       $totalBytes = 0;
       for ($index = 0; $index < $zip->numFiles; $index++) {
         $name = (string) $zip->getNameIndex($index);
@@ -83,22 +85,28 @@ final class BadgeAssetManager {
           continue;
         }
 
-        $size = (int) ($stat['size'] ?? 0);
-        $totalBytes += $size;
-        if ($size <= 0 || $size > self::MAX_ENTRY_BYTES || $totalBytes > self::MAX_ARCHIVE_BYTES) {
-          throw new RuntimeException('The Wallet artwork package exceeds the safe extraction limits.');
-        }
-
         $candidate = self::classifyEntry($platform, $name);
         if ($candidate === NULL) {
           continue;
+        }
+
+        $size = (int) ($stat['size'] ?? 0);
+        $totalBytes += $size;
+        if ($size <= 0 || $size > self::MAX_ENTRY_BYTES || $totalBytes > self::MAX_EXTRACTED_BYTES) {
+          throw new RuntimeException('The Wallet artwork package exceeds the safe extraction limits.');
         }
 
         $contents = $zip->getFromIndex($index);
         if (!is_string($contents)) {
           throw new RuntimeException('A Wallet artwork file could not be read from the ZIP package.');
         }
-        $dimensions = self::validateImage($candidate['extension'], $contents);
+        try {
+          $dimensions = self::validateImage($candidate['extension'], $contents);
+        }
+        catch (RuntimeException $exception) {
+          $ignoredAssets[$name] = $exception->getMessage();
+          continue;
+        }
         if (($assets[$candidate['locale']]['extension'] ?? NULL) === 'png'
           && $candidate['extension'] === 'svg'
         ) {
@@ -141,6 +149,7 @@ final class BadgeAssetManager {
       'installed_at' => gmdate('c'),
       'source' => $source,
       'assets' => $manifestAssets,
+      'ignored_files' => $ignoredAssets,
     ];
     $json = json_encode($manifest);
     if (!is_string($json)) {
@@ -335,6 +344,60 @@ final class BadgeAssetManager {
   }
 
   private static function inferAppleLocale(string $name): ?string {
+    if (preg_match('~/Add to Apple Wallet Badges/([^/]+)/RGB/~i', $name, $matches)) {
+      $appleLocales = [
+        'AR' => 'ar_SA',
+        'AZ' => 'az_AZ',
+        'BG' => 'bg_BG',
+        'CAES' => 'es_ES',
+        'CAFR' => 'fr_CA',
+        'CN' => 'zh_CN',
+        'CZ' => 'cs_CZ',
+        'DE' => 'de_DE',
+        'DK' => 'da_DK',
+        'EE' => 'et_EE',
+        'ES' => 'es_ES',
+        'ESMX' => 'es_MX',
+        'FI' => 'fi_FI',
+        'FR' => 'fr_FR',
+        'GR' => 'el_GR',
+        'HB' => 'he_IL',
+        'HK' => 'zh_HK',
+        'HR' => 'hr_HR',
+        'HU' => 'hu_HU',
+        'ID' => 'id_ID',
+        'IN' => 'en_IN',
+        'IT' => 'it_IT',
+        'JP' => 'ja_JP',
+        'KR' => 'ko_KR',
+        'LT' => 'lt_LT',
+        'LV' => 'lv_LV',
+        'MT' => 'mt_MT',
+        'MY' => 'ms_MY',
+        'NL' => 'nl_NL',
+        'NO' => 'no_NO',
+        'PH' => 'tl_PH',
+        'PL' => 'pl_PL',
+        'PT' => 'pt_PT',
+        'PTBR' => 'pt_BR',
+        'RO' => 'ro_RO',
+        'RU' => 'ru_RU',
+        'SE' => 'sv_SE',
+        'SI' => 'sl_SI',
+        'SK' => 'sk_SK',
+        'TH' => 'th_TH',
+        'TR' => 'tr_TR',
+        'TWTC' => 'zh_TW',
+        'UA' => 'uk_UA',
+        'US_UK' => 'en_US',
+        'VN' => 'vi_VN',
+      ];
+      $appleCode = strtoupper($matches[1]);
+      if (isset($appleLocales[$appleCode])) {
+        return $appleLocales[$appleCode];
+      }
+    }
+
     if (preg_match('/(?:^|[^a-z])([a-z]{2})[_-]([A-Z]{2})(?:[^a-z]|$)/', $name, $matches)) {
       return strtolower($matches[1]) . '_' . strtoupper($matches[2]);
     }
@@ -384,9 +447,10 @@ final class BadgeAssetManager {
       return ['width' => (int) $info[0], 'height' => (int) $info[1]];
     }
 
-    if (preg_match('/<(?:script|foreignObject)\b/i', $contents)
+    if (preg_match('/<!DOCTYPE\b/i', $contents)
+      || preg_match('/<(?:script|foreignObject)\b/i', $contents)
       || preg_match('/\son[a-z]+\s*=/i', $contents)
-      || preg_match('/(?:href|src)\s*=\s*["\']\s*(?:https?:|data:|javascript:)/i', $contents)
+      || preg_match('/url\(\s*["\']?(?:https?:|data:|\/\/|javascript:)/i', $contents)
     ) {
       throw new RuntimeException('A Wallet SVG contains unsafe active or external content.');
     }
@@ -405,6 +469,7 @@ final class BadgeAssetManager {
       libxml_use_internal_errors($previous);
     }
 
+    self::validateSvgReferences($document);
     $root = $document->documentElement;
     $width = self::svgNumber((string) $root->getAttribute('width'));
     $height = self::svgNumber((string) $root->getAttribute('height'));
@@ -416,6 +481,33 @@ final class BadgeAssetManager {
       throw new RuntimeException('A Wallet SVG does not declare usable dimensions.');
     }
     return ['width' => (int) round($width), 'height' => (int) round($height)];
+  }
+
+  private static function validateSvgReferences(\DOMDocument $document): void {
+    $xpath = new \DOMXPath($document);
+    foreach ($xpath->query('//@*') ?: [] as $attribute) {
+      if (!$attribute instanceof \DOMAttr || !in_array(strtolower($attribute->localName), ['href', 'src'], TRUE)) {
+        continue;
+      }
+
+      $reference = trim($attribute->value);
+      if ($reference === '' || str_starts_with($reference, '#')) {
+        continue;
+      }
+      if (!preg_match('~^data:image/png;base64,([A-Za-z0-9+/=\s]+)$~i', $reference, $matches)) {
+        throw new RuntimeException('A Wallet SVG contains an unsupported external reference.');
+      }
+
+      $encoded = preg_replace('/\s+/', '', $matches[1]);
+      $embeddedImage = is_string($encoded) ? base64_decode($encoded, TRUE) : FALSE;
+      if (!is_string($embeddedImage) || strlen($embeddedImage) > self::MAX_ENTRY_BYTES) {
+        throw new RuntimeException('A Wallet SVG contains an invalid embedded PNG image.');
+      }
+      $info = getimagesizefromstring($embeddedImage);
+      if (!is_array($info) || $info['mime'] !== 'image/png') {
+        throw new RuntimeException('A Wallet SVG contains an invalid embedded PNG image.');
+      }
+    }
   }
 
   private static function svgNumber(string $value): float {
