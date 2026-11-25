@@ -133,6 +133,8 @@ readonly REQUIRED_PACKAGE_FILES=(
   civi_wallet.php
   CRM/Wallet/BAO/Pass.php
   Civi/Wallet/ParticipantTokenSubscriber.php
+  Civi/Wallet/BadgeAssetManager.php
+  Civi/Wallet/WalletBadgeRenderer.php
   schema/WalletPass.entityType.php
   schema/WalletDevice.entityType.php
   settings/Wallet.setting.php

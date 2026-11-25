@@ -72,6 +72,17 @@
         {$form.wallet_apple_cert_password.html}
       </td>
     </tr>
+    <tr class="crm-wallet-badge-apple-zip-upload-form-block-wallet_badge_apple_zip_upload">
+      <td colspan="2">
+        <label class="wallet-field-label" for="wallet_badge_apple_zip_upload">{ts}Official Apple Wallet badge package (.zip){/ts}</label>
+        {$form.wallet_badge_apple_zip_upload.html}
+        <div class="description">
+          {ts}Upload the localized artwork package obtained under Apple's Wallet artwork licence. The artwork is installed in the public CiviCRM files directory and is not added to this AGPL extension.{/ts}
+          <a href="https://developer.apple.com/wallet/add-to-apple-wallet-guidelines/" target="_blank" rel="noopener noreferrer">{ts}Apple Wallet artwork guidelines{/ts}</a>
+        </div>
+        <div class="description">{$apple_badge_status}</div>
+      </td>
+    </tr>
   </table>
 
   <h3>{ts}Google Wallet Settings{/ts}</h3>
@@ -89,6 +100,23 @@
         {if $google_creds_status}
           <div class="description">{$google_creds_status}</div>
         {/if}
+      </td>
+    </tr>
+    <tr class="crm-wallet-badge-google-zip-upload-form-block-wallet_badge_google_zip_upload">
+      <td colspan="2">
+        <label class="wallet-field-label" for="wallet_badge_google_zip_upload">{ts}Official Google Wallet badge package (.zip){/ts}</label>
+        {$form.wallet_badge_google_zip_upload.html}
+        <div class="description">{ts}Upload Google's official SVG or PNG package, or use the option below to download it directly from Google.{/ts}</div>
+        <div class="description">{$google_badge_status}</div>
+      </td>
+    </tr>
+    <tr class="crm-wallet-badge-google-download-form-block-wallet_badge_google_download">
+      <td class="label">{ts}Official Google artwork{/ts}</td>
+      <td>
+        {$form.wallet_badge_google_download.html} {$form.wallet_badge_google_download.label}
+        <div class="description">
+          <a href="https://developers.google.com/wallet/generic/resources/brand-guidelines" target="_blank" rel="noopener noreferrer">{ts}Google Wallet brand guidelines{/ts}</a>
+        </div>
       </td>
     </tr>
   </table>

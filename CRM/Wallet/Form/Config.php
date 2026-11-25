@@ -61,6 +61,8 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
     // Certificate Upload
     $this->add('file', 'wallet_apple_cert_upload', E::ts('Apple Certificate (.p12)'));
     $this->add('password', 'wallet_apple_cert_password', E::ts('Certificate Password'));
+    $this->add('file', 'wallet_badge_apple_zip_upload', E::ts('Official Apple Wallet badge package (.zip)'));
+    $this->addRule('wallet_badge_apple_zip_upload', E::ts('The ZIP package must be smaller than 15 MB.'), 'maxfilesize', (string) (15 * 1024 * 1024));
 
     // Show current certificate status
     $certPath = Civi::settings()->get('wallet_apple_cert');
@@ -76,10 +78,28 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
     // --- Google Wallet Settings ---
     $this->add('text', 'wallet_google_issuer_id', E::ts('Issuer ID'), ['size' => 50]);
     $this->add('file', 'wallet_google_credentials_upload', E::ts('Google Credentials (.json)'));
+    $this->add('file', 'wallet_badge_google_zip_upload', E::ts('Official Google Wallet badge package (.zip)'));
+    $this->addRule('wallet_badge_google_zip_upload', E::ts('The ZIP package must be smaller than 15 MB.'), 'maxfilesize', (string) (15 * 1024 * 1024));
+    $this->add('advcheckbox', 'wallet_badge_google_download', E::ts('Download and install the current official Google badge package'));
 
     $credsPath = Civi::settings()->get('wallet_google_credentials');
     if ($credsPath && file_exists($credsPath)) {
       $this->assign('google_creds_status', E::ts('Credentials uploaded.'));
+    }
+
+    foreach (['apple', 'google'] as $platform) {
+      try {
+        $locales = \Civi\Wallet\BadgeAssetManager::installedLocales($platform);
+      }
+      catch (Throwable) {
+        $locales = [];
+      }
+      $this->assign(
+        $platform . '_badge_status',
+        $locales === []
+          ? E::ts('No official badge package is installed.')
+          : E::ts('%1 localized badges installed: %2', [1 => count($locales), 2 => implode(', ', $locales)])
+      );
     }
 
     // --- Organization Settings ---
@@ -176,6 +196,53 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
       $dest = $uploadDir . 'wallet_google_creds_' . time() . '.json';
       if (move_uploaded_file($_FILES['wallet_google_credentials_upload']['tmp_name'], $dest)) {
         Civi::settings()->set('wallet_google_credentials', $dest);
+      }
+    }
+
+    foreach (['apple', 'google'] as $platform) {
+      $field = 'wallet_badge_' . $platform . '_zip_upload';
+      if (empty($_FILES[$field]['name'])) {
+        continue;
+      }
+      try {
+        $manifest = \Civi\Wallet\BadgeAssetManager::installZip(
+          $platform,
+          (string) $_FILES[$field]['tmp_name'],
+          'CiviCRM administrative upload'
+        );
+        CRM_Core_Session::setStatus(
+          E::ts('%1 localized %2 Wallet badges were installed.', [
+            1 => count($manifest['assets'] ?? []),
+            2 => ucfirst($platform),
+          ]),
+          E::ts('Wallet badges installed'),
+          'success'
+        );
+      }
+      catch (Throwable $exception) {
+        CRM_Core_Session::setStatus(
+          E::ts('The %1 Wallet badge package was not installed: %2', [1 => ucfirst($platform), 2 => $exception->getMessage()]),
+          E::ts('Wallet badge installation failed'),
+          'error'
+        );
+      }
+    }
+
+    if (!empty($values['wallet_badge_google_download'])) {
+      try {
+        $manifest = \Civi\Wallet\BadgeAssetManager::downloadGooglePackage();
+        CRM_Core_Session::setStatus(
+          E::ts('%1 localized Google Wallet badges were downloaded and installed.', [1 => count($manifest['assets'] ?? [])]),
+          E::ts('Google Wallet badges installed'),
+          'success'
+        );
+      }
+      catch (Throwable $exception) {
+        CRM_Core_Session::setStatus(
+          E::ts('The official Google Wallet badge package could not be installed: %1', [1 => $exception->getMessage()]),
+          E::ts('Google Wallet badge download failed'),
+          'error'
+        );
       }
     }
 

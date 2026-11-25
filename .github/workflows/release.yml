@@ -38,6 +38,9 @@ jobs:
       - name: Test Wallet locale resolution
         run: php tests/LocaleResolverTest.php
 
+      - name: Test Wallet badge installation and rendering
+        run: php tests/WalletBadgeTest.php
+
       - name: Build scoped installable package
         run: ./build.sh
 

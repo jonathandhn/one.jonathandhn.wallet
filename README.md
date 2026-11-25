@@ -187,6 +187,28 @@ Raw participant tokens:
 Raw contact pass token:
 - `{wallet.contact_qr_url}`: Raw QR image URL for a contact pass or badge.
 
+### Official Wallet badges in email tokens
+
+The `*_links` tokens render the official localized Apple and Google artwork at
+a common height of 48 pixels. Each badge keeps its vendor-defined aspect ratio
+and is placed in an equal-width slot so a two-button row remains aligned.
+
+Badge artwork is not distributed in this AGPL repository. Install it from the
+Wallet settings page instead:
+
+- Apple: obtain the localized package under Apple's Wallet artwork licence,
+  then upload its ZIP package.
+- Google: select the administrative download option to retrieve the current
+  official PNG package directly from Google, or upload an official PNG or SVG
+  ZIP. PNG is preferred when both formats are present for broad email-client
+  compatibility.
+
+The validated assets and a manifest are stored below the public CiviCRM files
+directory in `wallet/badges/apple` and `wallet/badges/google`. The contact's
+preferred language selects the badge, with language-level and English
+fallbacks. If no suitable artwork is installed, the token uses a translated
+text link rather than imitating a vendor badge.
+
 - The raw URL tokens are intended for custom MJML/HTML templates where you want to place Apple, Google, or QR assets independently.
 - Event confirmation templates may URL-encode raw participant URL tokens when they are inserted directly inside an HTML attribute. In that context, prefer `{wallet.participant_qr}` unless you have confirmed the template keeps raw `{...}` token syntax intact in source mode.
 - Event reminder templates must use the full participant token name, for example `{wallet.participant_qr}` or `{wallet.participant_qr_url}`. A malformed token such as `{wallet.participant_qr.}` is invalid Smarty syntax and will fail before token replacement.
