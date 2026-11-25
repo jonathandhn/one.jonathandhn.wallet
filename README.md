@@ -42,6 +42,11 @@ contain the scoped production dependencies.
 - `openssl` PHP extension
 - `json` PHP extension
 
+MediaScaler provides Wallet image validation and Apple/Google image variants.
+Wallet tolerates a missing or not-yet-updated MediaScaler during rolling
+updates; image variant generation is unavailable until both extensions are
+ready.
+
 ## Installation
 
 1. Download/Clone this extension into your `extensions` directory.
@@ -124,9 +129,15 @@ current release does not yet generate every target variant automatically.
 | --- | --- | --- | --- |
 | Brand icon | PNG | At least 660 x 660 px (1:1) | Keep the mark inside the central 70%; Google applies a circular mask. |
 | Wide brand logo | Transparent PNG | 1280 x 400 px (16:5) | Use a light logo on dark passes and a dark logo on light passes. |
-| Event image master | PNG or high-quality JPEG | 2064 x 1624 px preferred; 1032 x 812 px minimum | Keep the subject near the selected focus point, leave vertical breathing room, and do not embed text. |
+| Event image master | PNG or high-quality JPEG | 2064 x 1624 px preferred; 1125 x 812 px minimum | Keep the subject centred, leave vertical breathing room, and do not embed text. |
 
-The event master is expected to produce these platform renditions:
+MediaScaler generates these platform renditions when the corresponding master
+is uploaded:
+
+- Apple icon: 29 x 29 px, 58 x 58 px (`@2x`) and 87 x 87 px (`@3x`).
+- Apple logo: 160 x 50 px, 320 x 100 px (`@2x`) and 480 x 150 px (`@3x`).
+- Google square logo: 660 x 660 px.
+- Google wide logo: 1280 x 400 px.
 
 - Google Wallet hero image: 1032 x 812 px, approximately 5:4, preferably PNG.
 - Apple Wallet legacy event strip: 375 x 98 px, plus 750 x 196 px (`@2x`)

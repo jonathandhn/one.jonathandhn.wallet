@@ -163,22 +163,12 @@ class CRM_Wallet_PassType_Donor {
     $entityType = 'Donor';
     CRM_Utils_Hook::singleton()->invoke(['passData', 'entityType', 'entityId', 'platform'], $passData, $entityType, $contactId, $platform, $empty, $empty, 'civicrm_wallet_pass_alter');
 
-    // Add Images
-    $extPath = CRM_Extension_System::singleton()->getMapper()->keyToBasePath('one.jonathandhn.wallet');
-    $imagesPath = $extPath . '/resources/images/';
-
     $pass->setData($passData);
-    if (file_exists($imagesPath . 'icon.png')) {
-      $pass->addFile($imagesPath . 'icon.png');
-    }
-    if (file_exists($imagesPath . 'icon@2x.png')) {
-      $pass->addFile($imagesPath . 'icon@2x.png');
-    }
-    if (file_exists($imagesPath . 'icon@3x.png')) {
-      $pass->addFile($imagesPath . 'icon@3x.png');
-    }
-    if (file_exists($imagesPath . 'logo.png')) {
-      $pass->addFile($imagesPath . 'logo.png');
+    foreach (['icon.png', 'icon@2x.png', 'icon@3x.png', 'logo.png', 'logo@2x.png', 'logo@3x.png'] as $asset) {
+      $assetPath = CRM_Wallet_Utils_ImageVariants::brandingPath($asset);
+      if (is_file($assetPath)) {
+        $pass->addFile($assetPath, $asset);
+      }
     }
 
     return $pass->create();
@@ -296,6 +286,12 @@ class CRM_Wallet_PassType_Donor {
       'id' => $objectId,
       'classId' => $classId,
       'state' => 'ACTIVE',
+      'logo' => [
+        'sourceUri' => ['uri' => CRM_Wallet_Utils_ImageVariants::brandingUrl('google-logo.png')],
+      ],
+      'wideLogo' => [
+        'sourceUri' => ['uri' => CRM_Wallet_Utils_ImageVariants::brandingUrl('google-wide-logo.png')],
+      ],
       'cardTitle' => [
         'defaultValue' => [
           'language' => civi_wallet_google_language_code(),

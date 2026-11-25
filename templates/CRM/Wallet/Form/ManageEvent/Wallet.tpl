@@ -18,7 +18,7 @@
         <td class="label">{$form["custom_`$walletFields.image.id`"].label}</td>
         <td>
           {$form["custom_`$walletFields.image.id`"].html}
-          <div class="description">{ts}Optional event image override used on participant wallet passes. Recommended strip/hero artwork with a wide format.{/ts}</div>
+          <div class="description">{ts}Optional PNG or JPEG event image, at least 1125 x 812 px. Keep the subject centred; MediaScaler generates the Apple strips and Google hero image.{/ts}</div>
           {if $walletCurrentImage}
             <div class="description">{ts 1=$walletCurrentImage.fileName}Current file: %1{/ts}</div>
           {/if}

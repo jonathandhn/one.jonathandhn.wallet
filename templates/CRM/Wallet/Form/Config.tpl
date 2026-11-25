@@ -150,14 +150,16 @@
     </tr>
     <tr class="crm-wallet-image-icon-upload-form-block-wallet_image_icon_upload">
       <td colspan="2">
-        <label class="wallet-field-label" for="wallet_image_icon_upload">{ts}Icon (icon.png){/ts}</label>
+        <label class="wallet-field-label" for="wallet_image_icon_upload">{ts}Brand icon master{/ts}</label>
         {$form.wallet_image_icon_upload.html}
+        <div class="description">{ts}Square PNG or JPEG, at least 660 x 660 px. MediaScaler generates the Apple and Google variants.{/ts}</div>
       </td>
     </tr>
     <tr class="crm-wallet-image-logo-upload-form-block-wallet_image_logo_upload">
       <td colspan="2">
-        <label class="wallet-field-label" for="wallet_image_logo_upload">{ts}Logo (logo.png){/ts}</label>
+        <label class="wallet-field-label" for="wallet_image_logo_upload">{ts}Wide logo master{/ts}</label>
         {$form.wallet_image_logo_upload.html}
+        <div class="description">{ts}PNG or JPEG, at least 1280 x 400 px. MediaScaler generates the Apple and Google variants.{/ts}</div>
       </td>
     </tr>
   </table>

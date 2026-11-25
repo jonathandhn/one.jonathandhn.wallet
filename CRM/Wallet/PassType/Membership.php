@@ -162,22 +162,12 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
     $empty = NULL;
     CRM_Utils_Hook::singleton()->invoke(['passData', 'entityType', 'entityId', 'platform'], $passData, $entityType, $membershipId, $platform, $empty, $empty, 'civicrm_wallet_pass_alter');
 
-    // Add Images
-    $extPath = CRM_Extension_System::singleton()->getMapper()->keyToBasePath('one.jonathandhn.wallet');
-    $imagesPath = $extPath . '/resources/images/';
-
     $pass->setData($passData);
-    if (file_exists($imagesPath . 'icon.png')) {
-      $pass->addFile($imagesPath . 'icon.png');
-    }
-    if (file_exists($imagesPath . 'icon@2x.png')) {
-      $pass->addFile($imagesPath . 'icon@2x.png');
-    }
-    if (file_exists($imagesPath . 'icon@3x.png')) {
-      $pass->addFile($imagesPath . 'icon@3x.png');
-    }
-    if (file_exists($imagesPath . 'logo.png')) {
-      $pass->addFile($imagesPath . 'logo.png');
+    foreach (['icon.png', 'icon@2x.png', 'icon@3x.png', 'logo.png', 'logo@2x.png', 'logo@3x.png'] as $asset) {
+      $assetPath = CRM_Wallet_Utils_ImageVariants::brandingPath($asset);
+      if (is_file($assetPath)) {
+        $pass->addFile($assetPath, $asset);
+      }
     }
 
     return $pass->create();
@@ -239,11 +229,8 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
 
     $objectId = $issuerId . '.' . 'Contact-' . $contactId;
 
-    // Image URLs
-    $extUrl = CRM_Extension_System::singleton()->getMapper()->keyToUrl('one.jonathandhn.wallet');
-    $timestamp = time();
-    $logoUrl = $extUrl . '/resources/images/icon.png?v=' . $timestamp;
-    $heroUrl = $extUrl . '/resources/images/logo.png?v=' . $timestamp;
+    $logoUrl = CRM_Wallet_Utils_ImageVariants::brandingUrl('google-logo.png');
+    $wideLogoUrl = CRM_Wallet_Utils_ImageVariants::brandingUrl('google-wide-logo.png');
 
     $isActive = !empty($status['is_current_member']);
 
@@ -257,8 +244,8 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
       'programLogo' => [
         'sourceUri' => ['uri' => $logoUrl],
       ],
-      'heroImage' => [
-        'sourceUri' => ['uri' => $heroUrl],
+      'wideProgramLogo' => [
+        'sourceUri' => ['uri' => $wideLogoUrl],
       ],
       'reviewStatus' => 'UNDER_REVIEW',
       'notifyPreference' => 'NOTIFY_ON_UPDATE',

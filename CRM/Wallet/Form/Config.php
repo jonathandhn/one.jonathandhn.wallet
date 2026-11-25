@@ -103,8 +103,11 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
     $this->add('text', 'wallet_color_qr_background', E::ts('QR Code Background Color'), ['type' => 'color', 'placeholder' => '#ffffff']);
     $this->add('text', 'wallet_color_label', E::ts('Label Color'), ['type' => 'color', 'placeholder' => '#ffffff']);
 
-    $this->add('file', 'wallet_image_icon_upload', E::ts('Icon (icon.png)'));
-    $this->add('file', 'wallet_image_logo_upload', E::ts('Logo (logo.png)'));
+    $this->add('file', 'wallet_image_icon_upload', E::ts('Brand icon master'));
+    $this->add('file', 'wallet_image_logo_upload', E::ts('Wide logo master'));
+    $this->addRule('wallet_image_icon_upload', E::ts('The image must be smaller than 15 MB.'), 'maxfilesize', (string) (15 * 1024 * 1024));
+    $this->addRule('wallet_image_logo_upload', E::ts('The image must be smaller than 15 MB.'), 'maxfilesize', (string) (15 * 1024 * 1024));
+    $this->setMaxFileSize(15 * 1024 * 1024);
 
     $barcodeModes = [
       'simple' => E::ts('Simple (ID / token compatible)'),
@@ -176,20 +179,28 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
       }
     }
 
-    // Handle Images
-    $extPath = CRM_Extension_System::singleton()->getMapper()->keyToBasePath('one.jonathandhn.wallet');
-    $imagesDir = $extPath . '/resources/images/';
-    if (!file_exists($imagesDir)) {
-      mkdir($imagesDir, 0755, TRUE);
+    $hasBrandIconUpload = !empty($_FILES['wallet_image_icon_upload']['name']);
+    $hasBrandLogoUpload = !empty($_FILES['wallet_image_logo_upload']['name']);
+    if (($hasBrandIconUpload || $hasBrandLogoUpload)
+      && !CRM_Wallet_Utils_ImageVariants::isMediaScalerAvailable()
+    ) {
+      CRM_Core_Session::setStatus(
+        E::ts('A compatible MediaScaler version is not available. The existing Wallet images were kept unchanged.'),
+        E::ts('Wallet images not changed'),
+        'warning'
+      );
     }
-
-    if (!empty($_FILES['wallet_image_icon_upload']['name'])) {
-      move_uploaded_file($_FILES['wallet_image_icon_upload']['tmp_name'], $imagesDir . 'icon.png');
-      copy($imagesDir . 'icon.png', $imagesDir . 'icon@2x.png');
-    }
-
-    if (!empty($_FILES['wallet_image_logo_upload']['name'])) {
-      move_uploaded_file($_FILES['wallet_image_logo_upload']['tmp_name'], $imagesDir . 'logo.png');
+    elseif ($hasBrandIconUpload || $hasBrandLogoUpload) {
+      if ($hasBrandIconUpload) {
+        CRM_Wallet_Utils_ImageVariants::generateBrandIcon(
+          (string) $_FILES['wallet_image_icon_upload']['tmp_name']
+        );
+      }
+      if ($hasBrandLogoUpload) {
+        CRM_Wallet_Utils_ImageVariants::generateBrandLogo(
+          (string) $_FILES['wallet_image_logo_upload']['tmp_name']
+        );
+      }
     }
 
     // Manually Save Settings to avoid MAX_FILE_SIZE error from parent::postProcess()

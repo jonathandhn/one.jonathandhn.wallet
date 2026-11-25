@@ -76,6 +76,12 @@ readonly WWDR_CERTIFICATE="vendor/pkpass/pkpass/src/Certificate/AppleWWDRCA.pem"
 mkdir -p "${PACKAGE_DIR}/$(dirname -- "${WWDR_CERTIFICATE}")"
 cp "${SOURCE_DIR}/${WWDR_CERTIFICATE}" "${PACKAGE_DIR}/${WWDR_CERTIFICATE}"
 
+# PHP-Scoper copies PHP sources only. Google Auth reads this runtime metadata
+# file when composing its client metrics header.
+readonly GOOGLE_AUTH_VERSION="vendor/google/auth/VERSION"
+mkdir -p "${PACKAGE_DIR}/$(dirname -- "${GOOGLE_AUTH_VERSION}")"
+cp "${SOURCE_DIR}/${GOOGLE_AUTH_VERSION}" "${PACKAGE_DIR}/${GOOGLE_AUTH_VERSION}"
+
 mkdir -p "${PACKAGE_DIR}/licenses"
 while IFS= read -r license_file; do
   relative_path="${license_file#${SOURCE_DIR}/vendor/}"
@@ -134,6 +140,7 @@ readonly REQUIRED_PACKAGE_FILES=(
   scripts/simulate-apple-wallet.php
   vendor/autoload.php
   vendor/pkpass/pkpass/src/Certificate/AppleWWDRCA.pem
+  vendor/google/auth/VERSION
 )
 for file in "${REQUIRED_PACKAGE_FILES[@]}"; do
   [[ -f "${PACKAGE_DIR}/${file}" ]] || fail "missing packaged file: ${file}"

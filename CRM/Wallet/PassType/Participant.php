@@ -236,18 +236,11 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
       'expirationDate' => !empty($event['end_date']) ? date('c', strtotime($event['end_date'])) : date('c', strtotime($event['start_date'] . ' + 1 day')),
     ];
 
-    $extPath = CRM_Extension_System::singleton()->getMapper()->keyToBasePath('one.jonathandhn.wallet');
-    $imagesPath = $extPath . '/resources/images/';
-    $iconPath = $imagesPath . 'icon.png';
-    $logoPath = $imagesPath . 'logo.png';
-
-    if (file_exists($iconPath)) {
-      $pass->addFile($iconPath, 'icon.png');
-      $pass->addFile($iconPath, 'icon@2x.png');
-    }
-    if (file_exists($logoPath)) {
-      $pass->addFile($logoPath, 'logo.png');
-      $pass->addFile($logoPath, 'logo@2x.png');
+    foreach (['icon.png', 'icon@2x.png', 'icon@3x.png', 'logo.png', 'logo@2x.png', 'logo@3x.png'] as $asset) {
+      $assetPath = CRM_Wallet_Utils_ImageVariants::brandingPath($asset);
+      if (is_file($assetPath)) {
+        $pass->addFile($assetPath, $asset);
+      }
     }
 
     $customFields = self::getWalletCustomFields();
@@ -261,13 +254,19 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
           if ($fileName) {
             $customImagePath = CRM_Core_Config::singleton()->customFileUploadDir . $fileName;
             if (file_exists($customImagePath)) {
-              $pass->addFile($customImagePath, 'strip.png');
-              $pass->addFile($customImagePath, 'strip@2x.png');
+              $variants = CRM_Wallet_Utils_EventImage::generateVariants(
+                (int) $event['id'],
+                $customImagePath
+              );
+              foreach ($variants['apple'] as $asset => $variantPath) {
+                $pass->addFile($variantPath, $asset);
+              }
             }
           }
         }
       }
-      catch (Exception) {
+      catch (Exception $e) {
+        CRM_Core_Error::debug_log_message('Apple Wallet event image generation failed: ' . $e->getMessage());
       }
     }
 
@@ -392,11 +391,9 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
     catch (Exception $e) {
     }
 
-    $extUrl = CRM_Extension_System::singleton()->getMapper()->keyToUrl('one.jonathandhn.wallet');
-    $timestamp = time();
-
-    $logoUrl = $extUrl . '/resources/images/icon.png?v=' . $timestamp;
-    $heroUrl = $extUrl . '/resources/images/logo.png?v=' . $timestamp;
+    $logoUrl = CRM_Wallet_Utils_ImageVariants::brandingUrl('google-logo.png');
+    $wideLogoUrl = CRM_Wallet_Utils_ImageVariants::brandingUrl('google-wide-logo.png');
+    $heroUrl = NULL;
 
     $customFields = self::getWalletCustomFields();
     $customColor = NULL;
@@ -451,13 +448,13 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
       ],
     ];
 
-    $imagesPath = \Civi::paths()->getPath('[one.jonathandhn.wallet]/resources/images/');
-    if (file_exists($imagesPath . 'icon.png')) {
+    if (is_file(CRM_Wallet_Utils_ImageVariants::brandingPath('google-logo.png'))) {
       $classMetadata['logo'] = ['sourceUri' => ['uri' => $logoUrl]];
     }
-
-    $hasCustomHero = ($heroUrl !== $extUrl . '/resources/images/logo.png?v=' . $timestamp);
-    if ($hasCustomHero || file_exists($imagesPath . 'logo.png')) {
+    if (is_file(CRM_Wallet_Utils_ImageVariants::brandingPath('google-wide-logo.png'))) {
+      $classMetadata['wideLogo'] = ['sourceUri' => ['uri' => $wideLogoUrl]];
+    }
+    if (is_string($heroUrl)) {
       $classMetadata['heroImage'] = ['sourceUri' => ['uri' => $heroUrl]];
     }
 
@@ -595,7 +592,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
       $objectMetadata['linksModuleData'] = ['uris' => $uris];
     }
 
-    if ($hasCustomHero || file_exists($imagesPath . 'logo.png')) {
+    if (is_string($heroUrl)) {
       $objectMetadata['heroImage'] = ['sourceUri' => ['uri' => $heroUrl]];
     }
 
