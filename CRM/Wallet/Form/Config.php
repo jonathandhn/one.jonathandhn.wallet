@@ -61,6 +61,21 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
     // Certificate Upload
     $this->add('file', 'wallet_apple_cert_upload', E::ts('Apple Certificate (.p12)'));
     $this->add('password', 'wallet_apple_cert_password', E::ts('Certificate Password'));
+    $this->add('text', 'wallet_apple_csr_common_name', E::ts('CSR Common Name'), ['size' => 50]);
+    $this->add('text', 'wallet_apple_csr_email', E::ts('CSR Email Address'), ['size' => 50]);
+    $this->add('text', 'wallet_apple_csr_organization', E::ts('CSR Organization'), ['size' => 50]);
+    $this->add('text', 'wallet_apple_csr_country', E::ts('CSR Country Code'), ['size' => 4, 'maxlength' => 2]);
+    $this->add('file', 'wallet_apple_signed_cert_upload', E::ts('Apple-issued Certificate (.cer)'));
+    $this->addRule('wallet_apple_signed_cert_upload', E::ts('The certificate file must be smaller than 1 MB.'), 'maxfilesize', (string) (1024 * 1024));
+    $this->addElement('submit', '_qf_Config_submit_generate_csr', E::ts('Generate a new CSR'), [
+      'class' => 'crm-button crm-button-type-secondary',
+      'onclick' => "return confirm(" . json_encode(E::ts('Generate a new private key and CSR? Any previous pending rotation will be replaced. The active certificate will not change.')) . ");",
+    ]);
+    $this->addElement('submit', '_qf_Config_submit_activate_certificate', E::ts('Activate validated certificate'), [
+      'class' => 'crm-button crm-button-type-save',
+      'onclick' => "return confirm(" . json_encode(E::ts('Activate the validated Apple Wallet certificate? The current certificate will be retained for recovery.')) . ");",
+    ]);
+    $this->setDefaultAction('submit');
     $this->add('file', 'wallet_badge_apple_zip_upload', E::ts('Official Apple Wallet badge package (.zip)'));
     $this->addRule('wallet_badge_apple_zip_upload', E::ts('The ZIP package must be smaller than 100 MB.'), 'maxfilesize', (string) (100 * 1024 * 1024));
 
@@ -73,6 +88,30 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
         $status .= ' ' . E::ts('Expires on: %1', [1 => $certInfo['validTo']]);
       }
       $this->assign('apple_cert_status', $status);
+    }
+
+    try {
+      $certificateState = \Civi\Wallet\AppleCertificateManager::state();
+      $pending = $certificateState['pending'] ?? NULL;
+      $candidate = $certificateState['candidate'] ?? NULL;
+      $this->assign('apple_csr_ready', is_array($pending));
+      $this->assign('apple_candidate_ready', is_array($candidate));
+      if (is_array($pending)) {
+        $this->assign('apple_csr_status', E::ts('CSR generated on %1 for %2.', [
+          1 => (string) ($pending['created_at'] ?? ''),
+          2 => (string) ($pending['pass_type_id'] ?? ''),
+        ]));
+        $this->assign('apple_csr_download_url', CRM_Utils_System::url('civicrm/admin/wallet/apple-csr', 'reset=1'));
+      }
+      if (is_array($candidate)) {
+        $this->assign('apple_candidate_status', E::ts('Certificate validated for %1. Expires on %2. The cryptographic signature test passed.', [
+          1 => (string) ($candidate['pass_type_id'] ?? ''),
+          2 => (string) ($candidate['valid_to'] ?? ''),
+        ]));
+      }
+    }
+    catch (Throwable $exception) {
+      $this->assign('apple_rotation_error', $exception->getMessage());
     }
 
     // --- Google Wallet Settings ---
@@ -161,6 +200,25 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
     $defaults['wallet_barcode_membership_mode'] = Civi::settings()->get('wallet_barcode_membership_mode') ?: 'simple';
     $defaults['wallet_barcode_donor_mode'] = Civi::settings()->get('wallet_barcode_donor_mode') ?: 'simple';
     $defaults['wallet_barcode_participant_mode'] = Civi::settings()->get('wallet_barcode_participant_mode') ?: 'simple';
+    $organization = (string) (Civi::settings()->get('wallet_org_name') ?: CRM_Core_BAO_Domain::getDomain()->name);
+    $defaults['wallet_apple_csr_common_name'] = $organization . ' Apple Wallet';
+    $defaults['wallet_apple_csr_organization'] = $organization;
+    $defaults['wallet_apple_csr_country'] = 'FR';
+    $contactId = CRM_Core_Session::getLoggedInContactID();
+    if ($contactId) {
+      try {
+        $email = \Civi\Api4\Email::get(FALSE)
+          ->addSelect('email')
+          ->addWhere('contact_id', '=', $contactId)
+          ->addWhere('is_primary', '=', TRUE)
+          ->execute()
+          ->first();
+        $defaults['wallet_apple_csr_email'] = (string) ($email['email'] ?? '');
+      }
+      catch (Throwable) {
+        $defaults['wallet_apple_csr_email'] = '';
+      }
+    }
     return $defaults;
   }
 
@@ -177,17 +235,81 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
       'wallet_type_donor_enabled',
     ];
 
-    // Handle Apple Cert Upload
+    // Handle legacy Apple PKCS#12 upload.
     if (!empty($_FILES['wallet_apple_cert_upload']['name'])) {
       $dest = $uploadDir . 'wallet_apple_cert_' . time() . '.p12';
       if (move_uploaded_file($_FILES['wallet_apple_cert_upload']['tmp_name'], $dest)) {
-        Civi::settings()->set('wallet_apple_cert', $dest);
-
-        // Verify Password
         $password = $values['wallet_apple_cert_password'] ?? Civi::settings()->get('wallet_apple_cert_password');
-        if (!$this->getCertInfo($dest, $password)) {
+        if ($this->getCertInfo($dest, $password)) {
+          chmod($dest, 0600);
+          Civi::settings()->set('wallet_apple_cert', $dest);
+          Civi::settings()->set('wallet_apple_cert_password', $password);
+        }
+        else {
+          unlink($dest);
           CRM_Core_Session::setStatus(E::ts('Invalid certificate password or corrupted file.'), E::ts('Error'), 'error');
         }
+      }
+    }
+    elseif (!empty($values['wallet_apple_cert_password'])) {
+      Civi::settings()->set('wallet_apple_cert_password', $values['wallet_apple_cert_password']);
+    }
+
+    $generateCsr = isset($_POST['_qf_Config_submit_generate_csr']) || !empty($values['_qf_Config_submit_generate_csr']);
+    if ($generateCsr) {
+      try {
+        \Civi\Wallet\AppleCertificateManager::generatePendingCsr(
+          (string) ($values['wallet_apple_pass_type_id'] ?? ''),
+          (string) ($values['wallet_apple_team_id'] ?? ''),
+          (string) ($values['wallet_apple_csr_common_name'] ?? ''),
+          (string) ($values['wallet_apple_csr_email'] ?? ''),
+          (string) ($values['wallet_apple_csr_organization'] ?? ''),
+          (string) ($values['wallet_apple_csr_country'] ?? '')
+        );
+        CRM_Core_Session::setStatus(
+          E::ts('The encrypted private key and CSR were generated. Download the CSR and submit it to Apple Developer.'),
+          E::ts('Apple Wallet CSR generated'),
+          'success'
+        );
+      }
+      catch (Throwable $exception) {
+        CRM_Core_Session::setStatus($exception->getMessage(), E::ts('Apple Wallet CSR generation failed'), 'error');
+      }
+    }
+
+    if (!empty($_FILES['wallet_apple_signed_cert_upload']['name'])) {
+      try {
+        \Civi\Wallet\AppleCertificateManager::stageSignedCertificate(
+          (string) $_FILES['wallet_apple_signed_cert_upload']['tmp_name'],
+          (string) ($values['wallet_apple_pass_type_id'] ?? ''),
+          (string) ($values['wallet_apple_team_id'] ?? '')
+        );
+        CRM_Core_Session::setStatus(
+          E::ts('The Apple certificate matches the generated private key, Pass Type ID, and Team ID. Its signature test passed. It has not been activated yet.'),
+          E::ts('Apple Wallet certificate validated'),
+          'success'
+        );
+      }
+      catch (Throwable $exception) {
+        CRM_Core_Session::setStatus($exception->getMessage(), E::ts('Apple Wallet certificate validation failed'), 'error');
+      }
+    }
+
+    $activateCertificate = isset($_POST['_qf_Config_submit_activate_certificate']) || !empty($values['_qf_Config_submit_activate_certificate']);
+    if ($activateCertificate) {
+      try {
+        \Civi\Wallet\AppleCertificateManager::activateCandidate(
+          (string) ($values['wallet_apple_pass_type_id'] ?? ''),
+          (string) ($values['wallet_apple_team_id'] ?? '')
+        );
+        CRM_Core_Session::setStatus(
+          E::ts('The validated Apple Wallet certificate is now active. The previous certificate was retained for recovery.'),
+          E::ts('Apple Wallet certificate activated'),
+          'success'
+        );
+      }
+      catch (Throwable $exception) {
+        CRM_Core_Session::setStatus($exception->getMessage(), E::ts('Apple Wallet certificate activation failed'), 'error');
       }
     }
 
@@ -274,7 +396,6 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
     $settingsToSave = [
       'wallet_apple_pass_type_id',
       'wallet_apple_team_id',
-      'wallet_apple_cert_password',
       'wallet_channel_apple_enabled',
       'wallet_channel_google_enabled',
       'wallet_channel_qr_enabled',

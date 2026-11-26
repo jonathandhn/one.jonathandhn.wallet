@@ -25,6 +25,7 @@ test:
     - php tests/ApiRequestGuardTest.php
     - php tests/LocaleResolverTest.php
     - php tests/WalletBadgeTest.php
+    - php tests/AppleCertificateManagerTest.php
     - php -l civi_wallet.php
     - php -l civi_wallet.civix.php
   rules:

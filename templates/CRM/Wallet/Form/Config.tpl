@@ -57,10 +57,75 @@
         {$form.wallet_apple_team_id.html}
       </td>
     </tr>
+    <tr>
+      <td colspan="2"><h4>{ts}Managed certificate rotation{/ts}</h4></td>
+    </tr>
+    <tr class="crm-wallet-apple-csr-common-name-form-block-wallet_apple_csr_common_name">
+      <td colspan="2">
+        <label class="wallet-field-label" for="wallet_apple_csr_common_name">{ts}CSR Common Name{/ts}</label>
+        {$form.wallet_apple_csr_common_name.html}
+      </td>
+    </tr>
+    <tr class="crm-wallet-apple-csr-email-form-block-wallet_apple_csr_email">
+      <td colspan="2">
+        <label class="wallet-field-label" for="wallet_apple_csr_email">{ts}CSR Email Address{/ts}</label>
+        {$form.wallet_apple_csr_email.html}
+      </td>
+    </tr>
+    <tr class="crm-wallet-apple-csr-organization-form-block-wallet_apple_csr_organization">
+      <td colspan="2">
+        <label class="wallet-field-label" for="wallet_apple_csr_organization">{ts}CSR Organization{/ts}</label>
+        {$form.wallet_apple_csr_organization.html}
+      </td>
+    </tr>
+    <tr class="crm-wallet-apple-csr-country-form-block-wallet_apple_csr_country">
+      <td colspan="2">
+        <label class="wallet-field-label" for="wallet_apple_csr_country">{ts}CSR Country Code{/ts}</label>
+        {$form.wallet_apple_csr_country.html}
+        <div class="description">{ts}Use the two-letter country code, for example FR.{/ts}</div>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2">
+        {$form._qf_Config_submit_generate_csr.html}
+        <div class="description">{ts}Generates an encrypted RSA private key and a public certificate request. The active certificate remains unchanged.{/ts}</div>
+        {if $apple_csr_status}
+          <div class="messages status no-popup">{$apple_csr_status}</div>
+        {/if}
+        {if $apple_csr_ready}
+          <a class="button" href="{$apple_csr_download_url|escape}">{ts}Download .certSigningRequest{/ts}</a>
+        {/if}
+      </td>
+    </tr>
+    <tr class="crm-wallet-apple-signed-cert-upload-form-block-wallet_apple_signed_cert_upload">
+      <td colspan="2">
+        <label class="wallet-field-label" for="wallet_apple_signed_cert_upload">{ts}Apple-issued Certificate (.cer){/ts}</label>
+        {$form.wallet_apple_signed_cert_upload.html}
+        <div class="description">{ts}Create the Pass Type ID certificate in Apple Developer with the downloaded CSR, then upload the resulting .cer file and save the settings. The certificate is validated but remains inactive.{/ts}</div>
+        {if $apple_candidate_status}
+          <div class="messages status no-popup">{$apple_candidate_status}</div>
+        {/if}
+      </td>
+    </tr>
+    {if $apple_candidate_ready}
+      <tr>
+        <td colspan="2">
+          {$form._qf_Config_submit_activate_certificate.html}
+          <div class="description">{ts}Activation occurs only after identity checks and a cryptographic signature test. The previous certificate is retained for recovery.{/ts}</div>
+        </td>
+      </tr>
+    {/if}
+    {if $apple_rotation_error}
+      <tr><td colspan="2"><div class="messages error no-popup">{$apple_rotation_error}</div></td></tr>
+    {/if}
+    <tr>
+      <td colspan="2"><h4>{ts}Legacy PKCS#12 import{/ts}</h4></td>
+    </tr>
     <tr class="crm-wallet-apple-cert-upload-form-block-wallet_apple_cert_upload">
       <td colspan="2">
         <label class="wallet-field-label" for="wallet_apple_cert_upload">{ts}Apple Certificate (.p12){/ts}</label>
         {$form.wallet_apple_cert_upload.html}
+        <div class="description">{ts}Compatibility option for an existing PKCS#12 certificate. New rotations should use the managed CSR workflow above.{/ts}</div>
         {if $apple_cert_status}
           <div class="description">{$apple_cert_status}</div>
         {/if}

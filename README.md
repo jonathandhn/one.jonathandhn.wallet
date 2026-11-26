@@ -93,11 +93,17 @@ To generate Apple passes, you need an Apple Developer account and a Pass Type ce
 
 1. **Pass Type ID**: Register a Pass Type ID in your Apple Developer Console (e.g., `pass.org.example.event`).
 2. **Apple Team ID**: Your Apple Developer Team ID (10 chars).
-3. **Certificate**: 
-   - Generate a Certificate for your Pass Type ID.
-   - Download it and export it as `.p12` (including the private key) using Keychain Access or OpenSSL.
-   - Upload the `.p12` file to your server (outside the webroot is recommended for security).
-   - Configure the path and password in the CiviCRM Wallet Settings.
+3. **Certificate**:
+   - In CiviWallet settings, complete the CSR identity fields and select **Generate a new CSR**.
+   - Download the `.certSigningRequest` file. The encrypted private key remains in CiviCRM's protected `ConfigAndLog/WalletCertificates` directory.
+   - In Apple Developer, create a Pass Type ID certificate for the configured identifier and upload this CSR.
+   - Download Apple's `.cer` file, upload it to CiviWallet, and save the settings.
+   - Review the validation result, then select **Activate validated certificate**. The existing certificate remains active until this explicit activation and is retained for recovery.
+
+The managed rotation validates the private-key match, Pass Type ID, Team ID,
+Apple WWDR issuer, validity dates, and a cryptographic signature before a
+candidate can be activated. The legacy `.p12` upload remains available for
+existing installations.
 
 ### Google Wallet Setup
 

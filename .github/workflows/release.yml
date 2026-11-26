@@ -41,6 +41,9 @@ jobs:
       - name: Test Wallet badge installation and rendering
         run: php tests/WalletBadgeTest.php
 
+      - name: Test Apple Wallet certificate rotation
+        run: php tests/AppleCertificateManagerTest.php
+
       - name: Build scoped installable package
         run: ./build.sh
 

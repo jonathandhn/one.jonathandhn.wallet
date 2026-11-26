@@ -134,7 +134,9 @@ readonly REQUIRED_PACKAGE_FILES=(
   CRM/Wallet/BAO/Pass.php
   Civi/Wallet/ParticipantTokenSubscriber.php
   Civi/Wallet/BadgeAssetManager.php
+  Civi/Wallet/AppleCertificateManager.php
   Civi/Wallet/WalletBadgeRenderer.php
+  CRM/Wallet/Page/AppleCsr.php
   schema/WalletPass.entityType.php
   schema/WalletDevice.entityType.php
   settings/Wallet.setting.php
