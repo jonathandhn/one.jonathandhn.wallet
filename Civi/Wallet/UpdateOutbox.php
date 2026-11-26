@@ -95,8 +95,6 @@ final class UpdateOutbox {
     if (!is_string($json)) {
       throw new RuntimeException('Unable to encode the Wallet mutation payload: ' . json_last_error_msg());
     }
-    $now = date('Y-m-d H:i:s');
-
     $key = \CRM_Core_DAO::escapeString($dedupeKey);
     $entity = \CRM_Core_DAO::escapeString($entityName);
     $op = \CRM_Core_DAO::escapeString($operation);
@@ -105,7 +103,7 @@ final class UpdateOutbox {
       INSERT INTO `civicrm_wallet_event_outbox`
         (`dedupe_key`, `entity_name`, `entity_id`, `operation`, `payload`, `revision`, `lease_token`, `lease_until`, `created_at`, `updated_at`)
       VALUES
-        ('{$key}', '{$entity}', {$entityId}, '{$op}', '{$encoded}', 1, NULL, NULL, '{$now}', '{$now}')
+        ('{$key}', '{$entity}', {$entityId}, '{$op}', '{$encoded}', 1, NULL, NULL, NOW(), NOW())
       ON DUPLICATE KEY UPDATE
         `entity_name` = VALUES(`entity_name`),
         `entity_id` = VALUES(`entity_id`),
@@ -279,7 +277,6 @@ final class UpdateOutbox {
       return;
     }
     $generation = self::nextGeneration();
-    $now = date('Y-m-d H:i:s');
     $table = \CRM_Core_DAO::escapeString($entityTable);
     $provider = \CRM_Core_DAO::escapeString($platform);
     $op = \CRM_Core_DAO::escapeString($operation);
@@ -287,7 +284,7 @@ final class UpdateOutbox {
       INSERT INTO `civicrm_wallet_update_outbox`
         (`entity_table`, `entity_id`, `platform`, `operation`, `generation`, `lease_token`, `available_at`, `lease_until`, `attempt_count`, `last_error`, `created_at`, `updated_at`)
       VALUES
-        ('{$table}', {$entityId}, '{$provider}', '{$op}', {$generation}, NULL, '{$now}', NULL, 0, NULL, '{$now}', '{$now}')
+        ('{$table}', {$entityId}, '{$provider}', '{$op}', {$generation}, NULL, NOW(), NULL, 0, NULL, NOW(), NOW())
       ON DUPLICATE KEY UPDATE
         `operation` = IF(VALUES(`generation`) > `generation`, VALUES(`operation`), `operation`),
         `generation` = GREATEST(`generation`, VALUES(`generation`)),
@@ -317,15 +314,13 @@ final class UpdateOutbox {
   private static function claimEvents(int $limit): array {
     $limit = max(1, min(2000, $limit));
     $token = bin2hex(random_bytes(16));
-    $now = date('Y-m-d H:i:s');
-    $leaseUntil = date('Y-m-d H:i:s', time() + 120);
     $transaction = new \CRM_Core_Transaction();
     try {
       $ids = [];
       $dao = \CRM_Core_DAO::executeQuery("
         SELECT id
         FROM civicrm_wallet_event_outbox
-        WHERE lease_until IS NULL OR lease_until <= '{$now}'
+        WHERE lease_until IS NULL OR lease_until <= NOW()
         ORDER BY id ASC
         LIMIT {$limit}
         FOR UPDATE
@@ -340,9 +335,9 @@ final class UpdateOutbox {
       $in = implode(',', $ids);
       \CRM_Core_DAO::executeQuery("
         UPDATE civicrm_wallet_event_outbox
-        SET lease_token = '{$token}', lease_until = '{$leaseUntil}'
+        SET lease_token = '{$token}', lease_until = DATE_ADD(NOW(), INTERVAL 120 SECOND)
         WHERE id IN ({$in})
-          AND (lease_until IS NULL OR lease_until <= '{$now}')
+          AND (lease_until IS NULL OR lease_until <= NOW())
       ");
       $transaction->commit();
 
@@ -363,8 +358,6 @@ final class UpdateOutbox {
    */
   private static function claimTargets(int $limit): array {
     $token = bin2hex(random_bytes(16));
-    $now = date('Y-m-d H:i:s');
-    $leaseUntil = date('Y-m-d H:i:s', time() + 300);
     $transaction = new \CRM_Core_Transaction();
     try {
       $ids = [];
@@ -372,8 +365,8 @@ final class UpdateOutbox {
         SELECT id
         FROM civicrm_wallet_update_outbox
         WHERE attempt_count < " . self::MAX_ATTEMPTS . "
-          AND available_at <= '{$now}'
-          AND (lease_until IS NULL OR lease_until <= '{$now}')
+          AND available_at <= NOW()
+          AND (lease_until IS NULL OR lease_until <= NOW())
         ORDER BY id ASC
         LIMIT {$limit}
         FOR UPDATE
@@ -388,9 +381,9 @@ final class UpdateOutbox {
       $in = implode(',', $ids);
       \CRM_Core_DAO::executeQuery("
         UPDATE civicrm_wallet_update_outbox
-        SET lease_token = '{$token}', lease_until = '{$leaseUntil}'
+        SET lease_token = '{$token}', lease_until = DATE_ADD(NOW(), INTERVAL 300 SECOND)
         WHERE id IN ({$in})
-          AND (lease_until IS NULL OR lease_until <= '{$now}')
+          AND (lease_until IS NULL OR lease_until <= NOW())
       ");
       $transaction->commit();
 
@@ -474,13 +467,12 @@ final class UpdateOutbox {
     $token = \CRM_Core_DAO::escapeString((string) $target['lease_token']);
     $attempt = (int) $target['attempt_count'] + ($incrementAttempt ? 1 : 0);
     $delay = $delayOverride ?? min(3600, 30 * (2 ** min(7, max(0, $attempt - 1))));
-    $availableAt = date('Y-m-d H:i:s', time() + $delay);
     $error = \CRM_Core_DAO::escapeString(substr($message, 0, 4000));
     $dao = \CRM_Core_DAO::executeQuery("
       UPDATE civicrm_wallet_update_outbox
       SET attempt_count = {$attempt},
           last_error = '{$error}',
-          available_at = '{$availableAt}',
+          available_at = DATE_ADD(NOW(), INTERVAL {$delay} SECOND),
           lease_token = NULL,
           lease_until = NULL,
           updated_at = NOW()
