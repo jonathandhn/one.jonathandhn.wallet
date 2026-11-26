@@ -81,6 +81,7 @@ function civi_wallet_civicrm_config(&$config) {
  */
 function civi_wallet_civicrm_install() {
   _civi_wallet_civix_civicrm_install();
+  \Civi\Wallet\UpdateOutbox::ensureSchema();
 }
 
 /**
@@ -90,6 +91,7 @@ function civi_wallet_civicrm_install() {
  */
 function civi_wallet_civicrm_enable() {
   _civi_wallet_civix_civicrm_enable();
+  \Civi\Wallet\UpdateOutbox::ensureSchema();
 }
 
 /**
@@ -121,42 +123,93 @@ function civi_wallet_civicrm_tabset($tabsetName, &$tabs, $context) {
 /**
  * Implements hook_civicrm_post().
  *
- * Trigger pass updates when Event or Participant is modified.
+ * Capture Wallet mutations without calling remote providers in the save request.
  */
 function civi_wallet_civicrm_post($op, $objectName, $objectId, &$objectRef) {
-  if ($op == 'edit' || $op == 'create') {
-    if ($objectName == 'Event') {
-      // Update all passes for this event
-      CRM_Wallet_BAO_Pass::updatePasses('Event', $objectId);
+  if ($op !== 'edit' && $op !== 'create') {
+    return;
+  }
+
+  $entityName = in_array($objectName, ['Individual', 'Organization', 'Household'], TRUE)
+    ? 'Contact'
+    : (string) $objectName;
+  try {
+    if (in_array($entityName, ['Event', 'Participant', 'Membership', 'Contact'], TRUE)) {
+      \Civi\Wallet\UpdateOutbox::captureMutation($op, $entityName, (int) $objectId);
     }
-    elseif ($objectName == 'Participant') {
-      // Update pass for this participant
-      CRM_Wallet_BAO_Pass::updatePasses('Participant', $objectId);
-    }
-    elseif ($objectName == 'Membership') {
-      // Update pass for this membership's contact
-      CRM_Wallet_BAO_Pass::updatePasses('Membership', $objectId);
-    }
-    elseif ($objectName == 'Contact') {
-      // Update pass for this contact
-      CRM_Wallet_BAO_Pass::updatePasses('Contact', $objectId);
-    }
-    elseif ($objectName == 'Contribution') {
+    elseif ($entityName === 'Contribution') {
       try {
         $contribution = \Civi\Api4\Contribution::get(FALSE)
-          ->addSelect('contact_id', 'contribution_status_id:name')
+          ->addSelect('contact_id')
           ->addWhere('id', '=', $objectId)
           ->execute()
           ->first();
 
-        if ($contribution && !empty($contribution['contact_id']) && ($contribution['contribution_status_id:name'] ?? NULL) === 'Completed') {
-          CRM_Wallet_BAO_Pass::updatePasses('Donor', $contribution['contact_id']);
+        if ($contribution && !empty($contribution['contact_id'])) {
+          \Civi\Wallet\UpdateOutbox::captureMutation('edit', 'Donor', (int) $contribution['contact_id']);
         }
       }
-      catch (Exception $e) {
-        CRM_Core_Error::debug_log_message("CiviWallet Contribution Hook Error: " . $e->getMessage());
+      catch (Throwable $exception) {
+        Civi::log()->warning('Unable to inspect the contribution for a Wallet update', [
+          'contribution_id' => $objectId,
+          'exception' => $exception,
+        ]);
       }
     }
+  }
+  catch (Throwable $exception) {
+    Civi::log()->warning('Unable to capture a CiviWallet mutation', [
+      'entity_name' => $entityName,
+      'entity_id' => $objectId,
+      'exception' => $exception,
+    ]);
+  }
+}
+
+/**
+ * Implements hook_civicrm_pre().
+ *
+ * Capture deletion dependencies while the source rows still exist.
+ */
+function civi_wallet_civicrm_pre($op, $objectName, $id, &$params) {
+  if ($op !== 'delete') {
+    return;
+  }
+
+  $entityName = in_array($objectName, ['Individual', 'Organization', 'Household'], TRUE)
+    ? 'Contact'
+    : (string) $objectName;
+  if ($entityName === 'Contribution') {
+    try {
+      $contactId = CRM_Core_DAO::singleValueQuery(
+        'SELECT contact_id FROM civicrm_contribution WHERE id = %1',
+        [1 => [(int) $id, 'Integer']],
+      );
+      if ($contactId) {
+        \Civi\Wallet\UpdateOutbox::captureMutation('edit', 'Donor', (int) $contactId);
+      }
+    }
+    catch (Throwable $exception) {
+      Civi::log()->warning('Unable to capture a CiviWallet contribution deletion', [
+        'contribution_id' => $id,
+        'exception' => $exception,
+      ]);
+    }
+    return;
+  }
+  if (!in_array($entityName, ['Event', 'Participant', 'Membership', 'Contact'], TRUE)) {
+    return;
+  }
+
+  try {
+    \Civi\Wallet\UpdateOutbox::captureMutation('delete', $entityName, (int) $id);
+  }
+  catch (Throwable $exception) {
+    Civi::log()->warning('Unable to capture a CiviWallet deletion', [
+      'entity_name' => $entityName,
+      'entity_id' => $id,
+      'exception' => $exception,
+    ]);
   }
 }
 
@@ -166,6 +219,9 @@ function civi_wallet_civicrm_post($op, $objectName, $objectId, &$objectRef) {
  * Process the wallet update queue.
  */
 function civi_wallet_civicrm_cron($job) {
+  \Civi\Wallet\UpdateOutbox::process(50);
+
+  // Drain update tasks written by versions older than the durable outbox.
   // Create or Get Queue
   $queue = CRM_Queue_Service::singleton()->create([
     'type' => 'Sql',
@@ -533,6 +589,22 @@ function civi_wallet_civicrm_check(&$messages) {
         \Psr\Log\LogLevel::WARNING,
         'fa-exclamation-triangle'
     );
+  }
+
+  try {
+    $deadLetters = \Civi\Wallet\UpdateOutbox::deadLetterCount();
+    if ($deadLetters > 0) {
+      $messages[] = new CRM_Utils_Check_Message(
+        'civi_wallet_outbox_dead_letters',
+        E::ts('%1 Wallet provider update(s) exhausted all retry attempts. Review the CiviCRM log and the civicrm_wallet_update_outbox table.', [1 => $deadLetters]),
+        E::ts('CiviWallet updates require attention'),
+        \Psr\Log\LogLevel::ERROR,
+        'fa-exclamation-circle'
+      );
+    }
+  }
+  catch (Throwable $exception) {
+    Civi::log()->warning('Unable to inspect the CiviWallet outbox', ['exception' => $exception]);
   }
 }
 

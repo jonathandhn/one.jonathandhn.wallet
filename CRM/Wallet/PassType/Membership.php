@@ -2,6 +2,8 @@
 
 use PKPass\PKPass;
 use CRM_Wallet_ExtensionUtil as E;
+use Civi\Wallet\MembershipResolver;
+use Civi\Wallet\PassLifecycle;
 
 class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
 
@@ -9,16 +11,9 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
     $contactId = $entityId;
     $contact = \Civi\Api4\Contact::get(FALSE)->addWhere('id', '=', $contactId)->execute()->first();
 
-    // Fetch most recent membership
-    $membership = \Civi\Api4\Membership::get(FALSE)
-      ->addWhere('contact_id', '=', $contactId)
-      ->addOrderBy('end_date', 'DESC')
-      ->setLimit(1)
-      ->execute()->first();
-
-    if (!$membership) {
-      throw new Exception("No membership found for Contact $contactId");
-    }
+    $resolvedMembership = MembershipResolver::resolveForContact((int) $contactId);
+    $membership = $resolvedMembership['membership'];
+    $status = $resolvedMembership['status'];
     $membershipId = $membership['id'];
 
     // Fetch Membership Type
@@ -73,8 +68,8 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
     $qrCodeAltText = is_numeric($qrCodeContent) ? $qrCodeContent : '';
 
     // Colors
-    $status = \Civi\Api4\MembershipStatus::get(FALSE)->addWhere('id', '=', $membership['status_id'])->execute()->first();
     $isActive = !empty($status['is_current_member']);
+    $lifecycle = PassLifecycle::forMembership($status, $membership['end_date'] ?? NULL);
 
     $bgColor = $isActive ? (Civi::settings()->get('wallet_color_membership_active') ?: 'rgb(83,180,89)') : (Civi::settings()->get('wallet_color_membership_expired') ?: 'rgb(160,160,160)');
 
@@ -95,6 +90,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
       'authenticationToken' => $authenticationToken,
       'webServiceURL' => CRM_Wallet_Utils_Url::webrootScript(),
       'teamIdentifier' => $teamIdentifier,
+      'voided' => PassLifecycle::isAppleVoided($lifecycle),
       'backgroundColor' => $bgColor,
       'foregroundColor' => 'rgb(255,255,255)',
       'labelColor' => 'rgb(255,255,255)',
@@ -143,15 +139,18 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
                     ],
         ],
       ],
-      'barcodes' => [
+    ];
+
+    if (!PassLifecycle::isAppleVoided($lifecycle)) {
+      $passData['barcodes'] = [
         [
           'format' => 'PKBarcodeFormatQR',
           'message' => $qrCodeContent,
           'messageEncoding' => 'iso-8859-1',
           'altText' => $qrCodeAltText,
         ],
-      ],
-    ];
+      ];
+    }
 
     if (!empty($membership['end_date'])) {
       $passData['expirationDate'] = date('c', strtotime($membership['end_date']));
@@ -177,20 +176,13 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
     $contactId = $entityId;
     $contact = \Civi\Api4\Contact::get(FALSE)->addWhere('id', '=', $contactId)->execute()->first();
 
-    // Fetch most recent membership
-    $membership = \Civi\Api4\Membership::get(FALSE)
-      ->addWhere('contact_id', '=', $contactId)
-      ->addOrderBy('end_date', 'DESC')
-      ->setLimit(1)
-      ->execute()->first();
-
-    if (!$membership) {
-      throw new Exception("No membership found for Contact $contactId");
-    }
+    $resolvedMembership = MembershipResolver::resolveForContact((int) $contactId);
+    $membership = $resolvedMembership['membership'];
+    $status = $resolvedMembership['status'];
     $membershipId = $membership['id'];
 
     $membershipType = \Civi\Api4\MembershipType::get(FALSE)->addWhere('id', '=', $membership['membership_type_id'])->execute()->first();
-    $status = \Civi\Api4\MembershipStatus::get(FALSE)->addWhere('id', '=', $membership['status_id'])->execute()->first();
+    $lifecycle = PassLifecycle::forMembership($status, $membership['end_date'] ?? NULL);
 
     // Configuration
     $issuerId = Civi::settings()->get('wallet_google_issuer_id');
@@ -231,8 +223,6 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
 
     $logoUrl = CRM_Wallet_Utils_ImageVariants::brandingUrl('google-logo.png');
     $wideLogoUrl = CRM_Wallet_Utils_ImageVariants::brandingUrl('google-wide-logo.png');
-
-    $isActive = !empty($status['is_current_member']);
 
     $endDateStr = !empty($membership['end_date']) ? CRM_Utils_Date::customFormat($membership['end_date'], '%e %b %Y') : E::ts('Lifetime');
 
@@ -290,7 +280,7 @@ class CRM_Wallet_PassType_Membership implements CRM_Wallet_PassType_Interface {
     $objectMetadata = [
       'id' => $objectId,
       'classId' => $classId,
-      'state' => $isActive ? 'ACTIVE' : 'INACTIVE',
+      'state' => PassLifecycle::googleState($lifecycle),
       'notifyPreference' => 'NOTIFY_ON_UPDATE',
       'accountId' => (string) $contactId,
       'accountName' => $contact['display_name'],

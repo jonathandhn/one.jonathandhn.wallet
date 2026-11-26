@@ -5,6 +5,8 @@ use chillerlan\QRCode\QROptions;
 use chillerlan\QRCode\Common\EccLevel;
 use chillerlan\QRCode\Data\QRMatrix;
 use chillerlan\QRCode\Output\QRGdImagePNG;
+use Civi\Wallet\MembershipResolver;
+use Civi\Wallet\PassLifecycle;
 
 class CRM_Wallet_Page_QR extends CRM_Core_Page {
 
@@ -70,7 +72,7 @@ class CRM_Wallet_Page_QR extends CRM_Core_Page {
 
   private function resolveParticipantById($participantId) {
     $dao = CRM_Core_DAO::executeQuery(
-        'SELECT id, contact_id, event_id FROM civicrm_participant WHERE id = %1 LIMIT 1',
+        'SELECT id, contact_id, event_id, status_id FROM civicrm_participant WHERE id = %1 LIMIT 1',
         [1 => [$participantId, 'Integer']]
     );
 
@@ -82,6 +84,7 @@ class CRM_Wallet_Page_QR extends CRM_Core_Page {
       'id' => (int) $dao->id,
       'contact_id' => (int) $dao->contact_id,
       'event_id' => (int) $dao->event_id,
+      'status_id' => (int) $dao->status_id,
     ];
   }
 
@@ -129,16 +132,15 @@ class CRM_Wallet_Page_QR extends CRM_Core_Page {
           CRM_Utils_System::permissionDenied();
         }
         $contactId = $membership['contact_id'];
+        $membershipStatus = \Civi\Api4\MembershipStatus::get(FALSE)
+          ->addWhere('id', '=', $membership['status_id'])
+          ->execute()
+          ->first() ?: [];
       }
       elseif ($contactId) {
-        $membership = \Civi\Api4\Membership::get(FALSE)
-          ->addWhere('contact_id', '=', $contactId)
-          ->addOrderBy('end_date', 'DESC')
-          ->setLimit(1)
-          ->execute()->first();
-        if (!$membership) {
-          CRM_Utils_System::permissionDenied();
-        }
+        $resolvedMembership = MembershipResolver::resolveForContact((int) $contactId);
+        $membership = $resolvedMembership['membership'];
+        $membershipStatus = $resolvedMembership['status'];
         $entityId = $membership['id'];
       }
       else {
@@ -162,6 +164,23 @@ class CRM_Wallet_Page_QR extends CRM_Core_Page {
     $isValidChecksum = CRM_Contact_BAO_Contact_Utils::validChecksum($contactId, $hash);
     if (!$isAdmin && !$isValidChecksum) {
       CRM_Utils_System::permissionDenied();
+    }
+
+    if ($entity === 'participant') {
+      $status = \Civi\Api4\ParticipantStatusType::get(FALSE)
+        ->addWhere('id', '=', $participant['status_id'])
+        ->execute()
+        ->first() ?: [];
+      if (PassLifecycle::forParticipant($status) !== PassLifecycle::ACTIVE) {
+        http_response_code(410);
+        CRM_Utils_System::civiExit();
+      }
+    }
+    elseif ($entity === 'membership') {
+      if (PassLifecycle::forMembership($membershipStatus, $membership['end_date'] ?? NULL) !== PassLifecycle::ACTIVE) {
+        http_response_code(410);
+        CRM_Utils_System::civiExit();
+      }
     }
 
     // Generate Barcode Value

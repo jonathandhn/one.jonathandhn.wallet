@@ -165,6 +165,13 @@ and [Google Wallet event-ticket brand guidelines](https://developers.google.com/
   - `simple`: keeps maximum compatibility with raw participant IDs, exports, spreadsheets, N8N, and third-party senders.
   - `signed`: emits a compact HMAC-signed `cw2` payload for scanner tooling that can verify authenticity.
 - Apple Wallet, Google Wallet, and local event QR images all use the same participant QR payload mode.
+- Negative participant statuses void Apple passes and make Google objects inactive.
+  Cancelled memberships follow the same rule, while expired memberships use
+  provider expiration semantics. Local QR endpoints return HTTP 410 for
+  tickets and memberships that are no longer valid.
+- Contact-level membership cards select a current membership first, then the
+  membership ending most recently. Cancelling one membership therefore does
+  not invalidate another current membership for the same contact.
 
 HTML composite tokens:
 - `{wallet.membership_links}`: Membership Apple/Google buttons as HTML.
@@ -269,11 +276,15 @@ cv ev 'CRM_Wallet_BAO_Pass::updatePasses("Donor", 321);'
 cv ev 'CRM_Wallet_BAO_Pass::updatePasses("Contact", 321);'
 ```
 
-These commands enqueue work in the SQL queue `one.jonathandhn.wallet.updates`.
+These commands append a mutation to the durable Wallet outbox.
 
 ### Process pending pass updates
 
-The queue is normally processed by cron. Each run processes up to `50` items.
+The outbox is normally processed by cron. Each run expands deduplicated CiviCRM
+mutations, then processes up to `50` provider-specific targets. Apple and
+Google targets are leased independently and retried with exponential backoff.
+After eight failed attempts, CiviCRM reports the target on the System Status
+page and retains its last error for diagnosis.
 
 You can force one run manually with:
 
@@ -281,11 +292,17 @@ You can force one run manually with:
 cv ev 'civi_wallet_civicrm_cron(NULL);'
 ```
 
-You can inspect the number of pending items with:
+You can inspect pending and failed targets with:
 
 ```bash
-cv ev '$q = CRM_Queue_Service::singleton()->create(["type" => "Sql", "name" => "one.jonathandhn.wallet.updates", "runner" => "task"]); return $q->numberOfItems();' --out=shell
+cv sql 'SELECT platform, operation, attempt_count, COUNT(*) AS count FROM civicrm_wallet_update_outbox GROUP BY platform, operation, attempt_count'
 ```
+
+The first outbox level records CiviCRM mutations in
+`civicrm_wallet_event_outbox`. The second level deduplicates actual pass work in
+`civicrm_wallet_update_outbox` by entity and provider. Deletions are captured
+in `hook_civicrm_pre` so event-participant and membership-contact relationships
+remain available when the worker expands them.
 
 ## Developer API (Hooks)
 

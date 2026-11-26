@@ -2,6 +2,7 @@
 
 use PKPass\PKPass;
 use CRM_Wallet_ExtensionUtil as E;
+use Civi\Wallet\PassLifecycle;
 
 class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
 
@@ -14,6 +15,11 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
 
     $event = \Civi\Api4\Event::get(FALSE)->addWhere('id', '=', $participant['event_id'])->execute()->first();
     $contact = \Civi\Api4\Contact::get(FALSE)->addWhere('id', '=', $participant['contact_id'])->execute()->first();
+    $participantStatus = \Civi\Api4\ParticipantStatusType::get(FALSE)
+      ->addWhere('id', '=', $participant['status_id'])
+      ->execute()
+      ->first() ?: [];
+    $lifecycle = PassLifecycle::forParticipant($participantStatus);
 
     // Initialize Wallet settings
     $certPath = Civi::settings()->get('wallet_apple_cert');
@@ -168,6 +174,15 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
             ],
     ];
 
+    if (!empty($participantStatus['label'])) {
+      $auxiliaryFields[] = [
+        'key' => 'participant-status',
+        'label' => E::ts('Status'),
+        'value' => (string) $participantStatus['label'],
+        'changeMessage' => E::ts('Your ticket status changed: %@'),
+      ];
+    }
+
     if (!empty($participant['fee_level'])) {
       $feeLevel = is_array($participant['fee_level']) ? implode(', ', $participant['fee_level']) : $participant['fee_level'];
       $auxiliaryFields[] = [
@@ -187,6 +202,7 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
       'authenticationToken' => $authenticationToken,
       'webServiceURL' => CRM_Wallet_Utils_Url::webrootScript(),
       'teamIdentifier' => $teamIdentifier,
+      'voided' => PassLifecycle::isAppleVoided($lifecycle),
       'backgroundColor' => Civi::settings()->get('wallet_color_background') ?: 'rgb(83,180,89)',
       'foregroundColor' => Civi::settings()->get('wallet_color_foreground') ?: 'rgb(255,255,255)',
       'labelColor' => Civi::settings()->get('wallet_color_label') ?: 'rgb(255,255,255)',
@@ -218,14 +234,6 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
         'auxiliaryFields' => $auxiliaryFields,
         'backFields' => $backFields,
       ],
-      'barcodes' => [
-        [
-          'format' => 'PKBarcodeFormatQR',
-          'message' => $qrCodeContent,
-          'messageEncoding' => 'iso-8859-1',
-          'altText' => $qrCodeAltText,
-        ],
-      ],
       'locations' => $locations,
       'relevantDates' => [
         [
@@ -235,6 +243,17 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
       ],
       'expirationDate' => !empty($event['end_date']) ? date('c', strtotime($event['end_date'])) : date('c', strtotime($event['start_date'] . ' + 1 day')),
     ];
+
+    if (!PassLifecycle::isAppleVoided($lifecycle)) {
+      $passData['barcodes'] = [
+        [
+          'format' => 'PKBarcodeFormatQR',
+          'message' => $qrCodeContent,
+          'messageEncoding' => 'iso-8859-1',
+          'altText' => $qrCodeAltText,
+        ],
+      ];
+    }
 
     foreach (['icon.png', 'icon@2x.png', 'icon@3x.png', 'logo.png', 'logo@2x.png', 'logo@3x.png'] as $asset) {
       $assetPath = CRM_Wallet_Utils_ImageVariants::brandingPath($asset);
@@ -540,20 +559,19 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
       ];
     }
 
-    $participantStatusClass = NULL;
+    $participantStatus = [];
     if (!empty($participant['status_id'])) {
       $participantStatus = \Civi\Api4\ParticipantStatusType::get(FALSE)
-        ->addSelect('class')
         ->addWhere('id', '=', $participant['status_id'])
         ->execute()
-        ->first();
-      $participantStatusClass = $participantStatus['class'] ?? NULL;
+        ->first() ?: [];
     }
+    $lifecycle = PassLifecycle::forParticipant($participantStatus);
 
     $objectMetadata = [
       'id' => $objectId,
       'classId' => $classId,
-      'state' => strcasecmp((string) $participantStatusClass, 'Positive') === 0 ? 'ACTIVE' : 'INACTIVE',
+      'state' => PassLifecycle::googleState($lifecycle),
       'notifyPreference' => 'NOTIFY_ON_UPDATE',
       'ticketHolderName' => $contact['display_name'],
       'textModulesData' => $textModulesData,
@@ -625,6 +643,18 @@ class CRM_Wallet_PassType_Participant implements CRM_Wallet_PassType_Interface {
         throw $e;
       }
     }
+
+    CRM_Core_DAO::executeQuery("
+      INSERT INTO civicrm_wallet_pass
+        (entity_table, entity_id, type, serial_number, authentication_token)
+      VALUES
+        ('civicrm_participant', %1, 'google', %2, %3)
+      ON DUPLICATE KEY UPDATE last_updated = last_updated
+    ", [
+      1 => [$participantId, 'Integer'],
+      2 => [$objectId, 'String'],
+      3 => [bin2hex(random_bytes(16)), 'String'],
+    ]);
 
     $creds = json_decode(file_get_contents($credentialsFile), TRUE);
     $claims = [
