@@ -101,7 +101,15 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
           1 => (string) ($pending['created_at'] ?? ''),
           2 => (string) ($pending['pass_type_id'] ?? ''),
         ]));
-        $this->assign('apple_csr_download_url', CRM_Utils_System::url('civicrm/admin/wallet/apple-csr', 'reset=1'));
+        // Smarty escapes the attribute below, so return a raw URL here to avoid
+        // double-encoding query separators on WordPress.
+        $this->assign('apple_csr_download_url', CRM_Utils_System::url(
+          'civicrm/admin/wallet/apple-csr',
+          'reset=1',
+          FALSE,
+          NULL,
+          FALSE
+        ));
       }
       if (is_array($candidate)) {
         $this->assign('apple_candidate_status', E::ts('Certificate validated for %1. Expires on %2. The cryptographic signature test passed.', [
