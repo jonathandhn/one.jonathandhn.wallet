@@ -285,6 +285,9 @@ mutations, then processes up to `50` provider-specific targets. Apple and
 Google targets are leased independently and retried with exponential backoff.
 After eight failed attempts, CiviCRM reports the target on the System Status
 page and retains its last error for diagnosis.
+Provider configuration failures, such as an expired Apple certificate, remain
+pending without consuming the retry budget. Activating or uploading a valid
+Apple certificate automatically releases every blocked Apple target.
 
 You can force one run manually with:
 

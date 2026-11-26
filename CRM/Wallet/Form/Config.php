@@ -244,6 +244,7 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
           chmod($dest, 0600);
           Civi::settings()->set('wallet_apple_cert', $dest);
           Civi::settings()->set('wallet_apple_cert_password', $password);
+          \Civi\Wallet\UpdateOutbox::retryPlatform('apple');
         }
         else {
           unlink($dest);

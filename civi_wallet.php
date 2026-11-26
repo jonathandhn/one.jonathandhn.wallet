@@ -592,6 +592,16 @@ function civi_wallet_civicrm_check(&$messages) {
   }
 
   try {
+    $retryingFailures = \Civi\Wallet\UpdateOutbox::retryingFailureCount();
+    if ($retryingFailures > 0) {
+      $messages[] = new CRM_Utils_Check_Message(
+        'civi_wallet_outbox_retrying_failures',
+        E::ts('%1 Wallet provider update(s) are waiting for another retry. Review the CiviCRM log and the civicrm_wallet_update_outbox table.', [1 => $retryingFailures]),
+        E::ts('CiviWallet updates are being retried'),
+        \Psr\Log\LogLevel::WARNING,
+        'fa-clock-o'
+      );
+    }
     $deadLetters = \Civi\Wallet\UpdateOutbox::deadLetterCount();
     if ($deadLetters > 0) {
       $messages[] = new CRM_Utils_Check_Message(

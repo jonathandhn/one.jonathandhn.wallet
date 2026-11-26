@@ -143,7 +143,13 @@ final class UpdateOutbox {
         }
       }
       catch (\Throwable $exception) {
-        self::releaseTarget($target, $exception->getMessage());
+        $configurationFailure = $exception instanceof ProviderConfigurationException;
+        self::releaseTarget(
+          $target,
+          $exception->getMessage(),
+          !$configurationFailure,
+          $configurationFailure ? 3600 : NULL,
+        );
         $stats['failed']++;
         \Civi::log()->warning('CiviWallet outbox target failed', [
           'platform' => $target['platform'],
@@ -162,6 +168,32 @@ final class UpdateOutbox {
       'SELECT COUNT(*) FROM civicrm_wallet_update_outbox WHERE attempt_count >= %1',
       [1 => [self::MAX_ATTEMPTS, 'Integer']],
     ) ?? 0);
+  }
+
+  public static function retryingFailureCount(): int {
+    self::ensureSchema();
+    return (int) (\CRM_Core_DAO::singleValueQuery(
+      'SELECT COUNT(*) FROM civicrm_wallet_update_outbox WHERE last_error IS NOT NULL AND attempt_count < %1',
+      [1 => [self::MAX_ATTEMPTS, 'Integer']],
+    ) ?? 0);
+  }
+
+  public static function retryPlatform(string $platform): int {
+    if (!in_array($platform, ['apple', 'google'], TRUE)) {
+      throw new RuntimeException("Unsupported Wallet platform: {$platform}");
+    }
+    self::ensureSchema();
+    $dao = \CRM_Core_DAO::executeQuery("
+      UPDATE civicrm_wallet_update_outbox
+      SET attempt_count = 0,
+          last_error = NULL,
+          available_at = NOW(),
+          lease_token = NULL,
+          lease_until = NULL,
+          updated_at = NOW()
+      WHERE platform = %1
+    ", [1 => [$platform, 'String']]);
+    return (int) $dao->affectedRows();
   }
 
   /**
@@ -428,13 +460,20 @@ final class UpdateOutbox {
   /**
    * @param array<string,mixed> $target
    * @param string $message Provider failure message.
+   * @param bool $incrementAttempt Whether this failure consumes a retry.
+   * @param int|null $delayOverride Explicit retry delay in seconds.
    */
-  private static function releaseTarget(array $target, string $message): void {
+  private static function releaseTarget(
+    array $target,
+    string $message,
+    bool $incrementAttempt = TRUE,
+    ?int $delayOverride = NULL
+  ): void {
     $id = (int) $target['id'];
     $generation = (int) $target['generation'];
     $token = \CRM_Core_DAO::escapeString((string) $target['lease_token']);
-    $attempt = (int) $target['attempt_count'] + 1;
-    $delay = min(3600, 30 * (2 ** min(7, $attempt - 1)));
+    $attempt = (int) $target['attempt_count'] + ($incrementAttempt ? 1 : 0);
+    $delay = $delayOverride ?? min(3600, 30 * (2 ** min(7, max(0, $attempt - 1))));
     $availableAt = date('Y-m-d H:i:s', time() + $delay);
     $error = \CRM_Core_DAO::escapeString(substr($message, 0, 4000));
     $dao = \CRM_Core_DAO::executeQuery("

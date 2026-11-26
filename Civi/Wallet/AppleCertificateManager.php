@@ -208,6 +208,9 @@ final class AppleCertificateManager {
     self::writeState($directory, ['pending' => NULL, 'candidate' => NULL, 'active' => $active]);
     $settings->set(self::PENDING_SECRET_SETTING, NULL);
     $settings->set(self::CANDIDATE_SECRET_SETTING, NULL);
+    if (class_exists(UpdateOutbox::class)) {
+      UpdateOutbox::retryPlatform('apple');
+    }
 
     return $active;
   }

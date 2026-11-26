@@ -2,6 +2,7 @@
 
 use CRM_Wallet_ExtensionUtil as E;
 use Civi\Wallet\LocaleResolver;
+use Civi\Wallet\ProviderConfigurationException;
 use Civi\Wallet\UpdateOutbox;
 use PKPass\PKPass;
 
@@ -299,8 +300,9 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO {
     $certPass = Civi::settings()->get('wallet_apple_cert_password');
 
     if (!$certPath || !file_exists($certPath)) {
-      throw new RuntimeException('Apple Push certificate not found or not configured.');
+      throw new ProviderConfigurationException('Apple Push certificate not found or not configured.');
     }
+    self::assertApplePushCertificateUsable((string) $certPath, (string) $certPass);
 
     if (!defined('CURL_HTTP_VERSION_2_0')) {
       define('CURL_HTTP_VERSION_2_0', 3);
@@ -350,6 +352,29 @@ class CRM_Wallet_BAO_Pass extends CRM_Core_DAO {
     }
 
     return FALSE;
+  }
+
+  private static function assertApplePushCertificateUsable(string $certPath, string $password): void {
+    $pkcs12 = file_get_contents($certPath);
+    $certificates = [];
+    if (!is_string($pkcs12) || !openssl_pkcs12_read($pkcs12, $certificates, $password)) {
+      throw new ProviderConfigurationException('Apple Push certificate cannot be opened with the configured password.');
+    }
+    $certificate = $certificates['cert'] ?? NULL;
+    $parsed = is_string($certificate) ? openssl_x509_parse($certificate) : FALSE;
+    if (!is_array($parsed)) {
+      throw new ProviderConfigurationException('Apple Push certificate metadata cannot be read.');
+    }
+    $validFrom = (int) ($parsed['validFrom_time_t'] ?? 0);
+    $validTo = (int) ($parsed['validTo_time_t'] ?? 0);
+    $now = time();
+    if ($validFrom > $now) {
+      throw new ProviderConfigurationException('Apple Push certificate is not valid yet.');
+    }
+    if ($validTo <= $now) {
+      $date = $validTo > 0 ? gmdate('Y-m-d', $validTo) : E::ts('unknown date');
+      throw new ProviderConfigurationException(E::ts('Apple Push certificate expired on %1.', [1 => $date]));
+    }
   }
 
 }
