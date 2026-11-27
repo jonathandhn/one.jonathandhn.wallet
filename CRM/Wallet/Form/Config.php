@@ -94,8 +94,35 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
       $certificateState = \Civi\Wallet\AppleCertificateManager::state();
       $pending = $certificateState['pending'] ?? NULL;
       $candidate = $certificateState['candidate'] ?? NULL;
+      $active = $certificateState['configured_active'] ?? NULL;
       $this->assign('apple_csr_ready', is_array($pending));
       $this->assign('apple_candidate_ready', is_array($candidate));
+      $this->assign('apple_active_ready', is_array($active));
+      if (is_array($active)) {
+        $this->assign('apple_active_status', E::ts('Active certificate for %1. Expires on %2. The PKCS#12 bundle and its private key are readable.', [
+          1 => (string) ($active['pass_type_id'] ?? ''),
+          2 => (string) ($active['valid_to'] ?? ''),
+        ]));
+        $this->assign('apple_active_team_id', (string) ($active['team_id'] ?? ''));
+        $this->assign('apple_active_fingerprint', (string) ($active['fingerprint_sha256'] ?? ''));
+        $this->assign('apple_active_bundle_url', CRM_Utils_System::url(
+          'civicrm/admin/wallet/apple-certificate-export',
+          'reset=1&part=bundle',
+          FALSE,
+          NULL,
+          FALSE
+        ));
+        $this->assign('apple_active_password_url', CRM_Utils_System::url(
+          'civicrm/admin/wallet/apple-certificate-export',
+          'reset=1&part=password',
+          FALSE,
+          NULL,
+          FALSE
+        ));
+      }
+      elseif (!empty($certificateState['configured_active_error'])) {
+        $this->assign('apple_active_error', (string) $certificateState['configured_active_error']);
+      }
       if (is_array($pending)) {
         $this->assign('apple_csr_status', E::ts('CSR generated on %1 for %2.', [
           1 => (string) ($pending['created_at'] ?? ''),

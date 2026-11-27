@@ -60,6 +60,23 @@
     <tr>
       <td colspan="2"><h4>{ts}Managed certificate rotation{/ts}</h4></td>
     </tr>
+    {if $apple_active_ready}
+      <tr>
+        <td colspan="2">
+          <div class="messages status no-popup">
+            <strong>{ts}Active Apple Wallet certificate{/ts}</strong><br>
+            {$apple_active_status}<br>
+            {ts}Team ID:{/ts} {$apple_active_team_id|escape}<br>
+            {if $apple_active_fingerprint}{ts}SHA-256 fingerprint:{/ts} <code>{$apple_active_fingerprint|escape}</code>{/if}
+          </div>
+          <a class="button" href="{$apple_active_bundle_url|escape}">{ts}Download active PKCS#12 bundle{/ts}</a>
+          <a class="button" href="{$apple_active_password_url|escape}">{ts}Download bundle password{/ts}</a>
+          <div class="description">{ts}Store both downloads securely. The PKCS#12 bundle contains the private key and must not be shared publicly.{/ts}</div>
+        </td>
+      </tr>
+    {elseif $apple_active_error}
+      <tr><td colspan="2"><div class="messages error no-popup">{$apple_active_error}</div></td></tr>
+    {/if}
     <tr class="crm-wallet-apple-csr-common-name-form-block-wallet_apple_csr_common_name">
       <td colspan="2">
         <label class="wallet-field-label" for="wallet_apple_csr_common_name">{ts}CSR Common Name{/ts}</label>

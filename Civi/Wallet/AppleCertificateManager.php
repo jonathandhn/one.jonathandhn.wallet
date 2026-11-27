@@ -256,6 +256,38 @@ final class AppleCertificateManager {
   }
 
   /**
+   * Return the active PKCS#12 bundle after verifying that it is readable.
+   *
+   * @return array{path:string,filename:string}
+   */
+  public static function activeCertificateDownload(): array {
+    $settings = \Civi::settings();
+    $path = (string) $settings->get('wallet_apple_cert');
+    $password = (string) $settings->get('wallet_apple_cert_password');
+    $info = self::inspectPkcs12($path, $password);
+    $identifier = preg_replace('/[^A-Za-z0-9.-]+/', '-', $info['pass_type_id'] ?: 'wallet');
+
+    return [
+      'path' => $path,
+      'filename' => 'AppleWallet-' . $identifier . '.p12',
+    ];
+  }
+
+  /**
+   * Return the password for the active PKCS#12 bundle after verifying it.
+   */
+  public static function activeCertificatePassword(): string {
+    $settings = \Civi::settings();
+    $path = (string) $settings->get('wallet_apple_cert');
+    $password = (string) $settings->get('wallet_apple_cert_password');
+    if ($password === '') {
+      throw new RuntimeException('The active Apple Wallet certificate password is unavailable.');
+    }
+    self::inspectPkcs12($path, $password);
+    return $password;
+  }
+
+  /**
    * @return array<string,mixed>
    */
   private static function validateCertificate(\OpenSSLCertificate $certificate, \OpenSSLAsymmetricKey $privateKey, string $passTypeId, string $teamId): array {
@@ -316,6 +348,7 @@ final class AppleCertificateManager {
     if (!is_array($parsed)) {
       throw new RuntimeException('The configured Apple Wallet certificate metadata cannot be read.');
     }
+    $fingerprint = openssl_x509_fingerprint($certificates['cert'], 'sha256');
     return [
       'pass_type_id' => self::nameValue($parsed['subject'] ?? [], ['UID', 'userId']),
       'team_id' => self::nameValue($parsed['subject'] ?? [], ['OU', 'organizationalUnitName']),
@@ -323,6 +356,7 @@ final class AppleCertificateManager {
       'issuer' => self::nameValue($parsed['issuer'] ?? [], ['CN', 'commonName']),
       'valid_from' => gmdate('c', (int) ($parsed['validFrom_time_t'] ?? 0)),
       'valid_to' => gmdate('c', (int) ($parsed['validTo_time_t'] ?? 0)),
+      'fingerprint_sha256' => is_string($fingerprint) ? strtolower(str_replace(':', '', $fingerprint)) : '',
     ];
   }
 

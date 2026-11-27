@@ -152,11 +152,16 @@ $activePath = Civi::settings()->get('wallet_apple_cert');
 appleCertificateAssertTrue(is_string($activePath) && is_file($activePath), 'activation switches the active certificate path');
 appleCertificateAssertSame(0600, fileperms($activePath) & 0777, 'active certificate has private file permissions');
 appleCertificateAssertSame($oldCertificatePath, Civi::settings()->get('wallet_apple_previous_cert'), 'previous certificate is retained for recovery');
+$activeDownload = AppleCertificateManager::activeCertificateDownload();
+appleCertificateAssertSame($activePath, $activeDownload['path'], 'active certificate export returns the configured PKCS#12 file');
+appleCertificateAssertTrue(str_ends_with($activeDownload['filename'], '.p12'), 'active certificate export uses the PKCS#12 extension');
+appleCertificateAssertSame(Civi::settings()->get('wallet_apple_cert_password'), AppleCertificateManager::activeCertificatePassword(), 'active certificate password export returns the verified password');
 
 $state = AppleCertificateManager::state();
 appleCertificateAssertSame(NULL, $state['pending'], 'pending CSR is cleared after activation');
 appleCertificateAssertSame(NULL, $state['candidate'], 'candidate is cleared after activation');
 appleCertificateAssertSame($passTypeId, $state['configured_active']['pass_type_id'], 'active PKCS#12 metadata can be inspected');
+appleCertificateAssertTrue(!empty($state['configured_active']['fingerprint_sha256']), 'active PKCS#12 metadata includes its fingerprint');
 appleCertificateAssertTrue(is_file($testDirectory . '/WalletCertificates/.htaccess'), 'private directory contains Apache access protection');
 
 removeAppleCertificateTestDirectory($testDirectory);

@@ -143,6 +143,7 @@ readonly REQUIRED_PACKAGE_FILES=(
   Civi/Wallet/UpdateOutbox.php
   Civi/Wallet/WalletBadgeRenderer.php
   CRM/Wallet/Page/AppleCsr.php
+  CRM/Wallet/Page/AppleCertificateExport.php
   schema/WalletPass.entityType.php
   schema/WalletDevice.entityType.php
   settings/Wallet.setting.php
