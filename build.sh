@@ -135,6 +135,7 @@ readonly REQUIRED_PACKAGE_FILES=(
   Civi/Wallet/ParticipantTokenSubscriber.php
   Civi/Wallet/BadgeAssetManager.php
   Civi/Wallet/AppleCertificateManager.php
+  Civi/Wallet/AppleCertificateSubmission.php
   Civi/Wallet/PassLifecycle.php
   Civi/Wallet/ProviderConfigurationException.php
   Civi/Wallet/MutationTargetResolver.php

@@ -44,6 +44,9 @@ jobs:
       - name: Test Apple Wallet certificate rotation
         run: php tests/AppleCertificateManagerTest.php
 
+      - name: Test Apple Wallet certificate form actions
+        run: php tests/AppleCertificateSubmissionTest.php
+
       - name: Build scoped installable package
         run: ./build.sh
 

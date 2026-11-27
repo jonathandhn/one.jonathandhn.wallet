@@ -26,6 +26,7 @@ test:
     - php tests/LocaleResolverTest.php
     - php tests/WalletBadgeTest.php
     - php tests/AppleCertificateManagerTest.php
+    - php tests/AppleCertificateSubmissionTest.php
     - php tests/PassLifecycleTest.php
     - php -l civi_wallet.php
     - php -l civi_wallet.civix.php

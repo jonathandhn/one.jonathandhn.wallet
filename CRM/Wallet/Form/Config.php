@@ -205,6 +205,9 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
 
   public function setDefaultValues() {
     $defaults = parent::setDefaultValues();
+    // Never send the stored PKCS#12 password back to the browser. It is only
+    // accepted when a legacy PKCS#12 file is explicitly uploaded.
+    $defaults['wallet_apple_cert_password'] = '';
     $defaults['wallet_barcode_membership_mode'] = Civi::settings()->get('wallet_barcode_membership_mode') ?: 'simple';
     $defaults['wallet_barcode_donor_mode'] = Civi::settings()->get('wallet_barcode_donor_mode') ?: 'simple';
     $defaults['wallet_barcode_participant_mode'] = Civi::settings()->get('wallet_barcode_participant_mode') ?: 'simple';
@@ -234,6 +237,7 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
     $values = $this->exportValues();
     $config = CRM_Core_Config::singleton();
     $uploadDir = $config->customFileUploadDir;
+    $certificateAction = \Civi\Wallet\AppleCertificateSubmission::resolve($_POST, $values, $_FILES);
     $booleanSettings = [
       'wallet_channel_apple_enabled',
       'wallet_channel_google_enabled',
@@ -243,8 +247,10 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
       'wallet_type_donor_enabled',
     ];
 
-    // Handle legacy Apple PKCS#12 upload.
-    if (!empty($_FILES['wallet_apple_cert_upload']['name'])) {
+    // Each submit performs at most one certificate operation. In particular,
+    // a certificate left in a file input must not be validated after creating
+    // a new CSR with a different private key.
+    if ($certificateAction === \Civi\Wallet\AppleCertificateSubmission::IMPORT_LEGACY_PKCS12) {
       $dest = $uploadDir . 'wallet_apple_cert_' . time() . '.p12';
       if (move_uploaded_file($_FILES['wallet_apple_cert_upload']['tmp_name'], $dest)) {
         $password = $values['wallet_apple_cert_password'] ?? Civi::settings()->get('wallet_apple_cert_password');
@@ -260,12 +266,8 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
         }
       }
     }
-    elseif (!empty($values['wallet_apple_cert_password'])) {
-      Civi::settings()->set('wallet_apple_cert_password', $values['wallet_apple_cert_password']);
-    }
 
-    $generateCsr = isset($_POST['_qf_Config_submit_generate_csr']) || !empty($values['_qf_Config_submit_generate_csr']);
-    if ($generateCsr) {
+    if ($certificateAction === \Civi\Wallet\AppleCertificateSubmission::GENERATE_CSR) {
       try {
         \Civi\Wallet\AppleCertificateManager::generatePendingCsr(
           (string) ($values['wallet_apple_pass_type_id'] ?? ''),
@@ -286,7 +288,7 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
       }
     }
 
-    if (!empty($_FILES['wallet_apple_signed_cert_upload']['name'])) {
+    if ($certificateAction === \Civi\Wallet\AppleCertificateSubmission::IMPORT_SIGNED_CERTIFICATE) {
       try {
         \Civi\Wallet\AppleCertificateManager::stageSignedCertificate(
           (string) $_FILES['wallet_apple_signed_cert_upload']['tmp_name'],
@@ -304,8 +306,7 @@ class CRM_Wallet_Form_Config extends CRM_Admin_Form_Setting {
       }
     }
 
-    $activateCertificate = isset($_POST['_qf_Config_submit_activate_certificate']) || !empty($values['_qf_Config_submit_activate_certificate']);
-    if ($activateCertificate) {
+    if ($certificateAction === \Civi\Wallet\AppleCertificateSubmission::ACTIVATE_CERTIFICATE) {
       try {
         \Civi\Wallet\AppleCertificateManager::activateCandidate(
           (string) ($values['wallet_apple_pass_type_id'] ?? ''),
